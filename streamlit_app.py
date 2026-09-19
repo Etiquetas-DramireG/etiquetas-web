@@ -48,7 +48,7 @@ up2 = st.sidebar.file_uploader("Cambiar Logo 2", type=["png","jpg","jpeg"])
 if up1: open("logo_imagen1.png","wb").write(up1.getbuffer())
 if up2: open("logo_imagen2.png","wb").write(up2.getbuffer())
 
-formato = st.sidebar.selectbox("🖨️ Impresora", ["A4 - 4 por hoja", "A3 - 1 gigante", "Termica 100x150mm"])
+formato = st.sidebar.selectbox("🖨️ Impresora", ["A3 - 1 gigante (Recomendado)", "A4 - 4 por hoja", "Termica 100x150mm"], index=0)
 if st.sidebar.button("Cerrar sesión"):
     st.session_state.login=False; st.rerun()
 
@@ -128,12 +128,37 @@ if st.session_state.lista:
     if st.button(f"📄 GENERAR PDF MASIVO ({len(st.session_state.lista)})",type="primary"):
         pdf=FPDF(orientation='P',unit='mm',format=(100,150) if "Termica" in formato else 'A4' if "A4" in formato else 'A3')
         def dibujar(pdf,data,x,y,w,h):
-            pdf.set_xy(x,y); pdf.set_font("Arial","B",12); pdf.cell(w,8,f"{data['destino']}",align="C",ln=True)
+            # Fondo blanco y borde grueso
+            pdf.set_fill_color(255,255,255)
+            pdf.rect(x,y,w,h,'DF')
+            # Logo grande a la izquierda
             if logo1_on and os.path.exists("logo_imagen1.png"):
-                try: pdf.image("logo_imagen1.png",x=x+2,y=y+2,w=15)
+                try: pdf.image("logo_imagen1.png", x=x+3, y=y+3, w=22, h=18)
                 except: pass
+            # DESTINO GIGANTE
+            pdf.set_xy(x, y+2)
+            pdf.set_font("Arial","B",22)
+            pdf.cell(w,12,f"{data['destino'].upper()}",align="C",ln=True)
+            
+            # NOMBRE GIGANTE CENTRADO
+            pdf.set_xy(x+5, y+30)
+            pdf.set_font("Arial","B",16)
+            pdf.multi_cell(w-10, 9, f"{data['nombre'].upper()}", align="C")
+            
+            # DNI GRANDE ABAJO
+            pdf.set_xy(x, y+h-25)
+            pdf.set_font("Arial","B",14)
+            pdf.cell(w,10,f"{data['dni']}",align="C",ln=True)
+            
+            # Direccion / Nota chiquito
+            if data['direc']:
+                pdf.set_xy(x, y+h-15)
+                pdf.set_font("Arial","",9)
+                pdf.cell(w,5,f"{data['direc'][:40]}",align="C",ln=True)
+            
+            # Logo 2 a la derecha si quiere
             if logo2_on and os.path.exists("logo_imagen2.png"):
-                try: pdf.image("logo_imagen2.png",x=x+w-17,y=y+2,w=15)
+                try: pdf.image("logo_imagen2.png", x=x+w-25, y=y+3, w=20)
                 except: pass
             pdf.set_xy(x,y+10); pdf.set_font("Arial","B",10); pdf.cell(w,6,f"{data['nombre'][:30]}",align="C",ln=True)
             pdf.set_x(x); pdf.set_font("Arial","",8); pdf.cell(w,5,f"{data['dni']}",align="C",ln=True)
