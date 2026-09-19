@@ -28,81 +28,125 @@ if not st.session_state.login:
         else: st.error("Error")
     st.stop()
 
-st.sidebar.title("⚙️")
-api_token = st.sidebar.text_input("Token API (opcional)", type="password")
-up_logo = st.sidebar.file_uploader("Sube tu logo DG", type=["png","jpg","jpeg"])
-if up_logo: open("logo_dg.png","wb").write(up_logo.getbuffer())
-up_marcas = st.sidebar.file_uploader("Sube marcas (Nike etc)", type=["png","jpg"])
-if up_marcas: open("marcas.png","wb").write(up_marcas.getbuffer())
-if st.sidebar.button("Cerrar"): st.session_state.login=False; st.rerun()
+# SIDEBAR
+st.sidebar.title("⚙️ Configuración")
+api_token = st.sidebar.text_input("Token API (opcional)", type="password", placeholder="Vacío = funciona igual")
 
-st.title("🏷️ DramirenG - Etiqueta Horizontal")
+st.sidebar.divider()
+st.sidebar.subheader("🖨️ Tipo de Impresora")
+tipo_impresora = st.sidebar.radio("Elige impresora:", ["🖨️ Impresora Normal (A4)", "🏷️ Impresora Térmica (100x150)"])
+
+if "Normal" in tipo_impresora:
+    formato = st.sidebar.selectbox("Formato", ["Horizontal - 1 por hoja (Grande)", "Vertical - 4 por hoja (Ahorra papel)"])
+else:
+    formato = st.sidebar.selectbox("Formato Térmico", ["100x150mm - 1 por sticker", "80x100mm - Pequeña"])
+
+st.sidebar.divider()
+up_logo = st.sidebar.file_uploader("Logo DG", type=["png","jpg","jpeg"])
+if up_logo: open("logo_dg.png","wb").write(up_logo.getbuffer())
+up_marcas = st.sidebar.file_uploader("Marcas (Nike etc)", type=["png","jpg"])
+if up_marcas: open("marcas.png","wb").write(up_marcas.getbuffer())
+
+if st.sidebar.button("Cerrar sesión"): st.session_state.login=False; st.rerun()
+
+st.title("🏷️ DramirenG - Despacho")
+
+# Campos vacíos siempre
+for k in ['dni_input','nombre_input','destino_input','factura_input','celular_input']:
+    if k not in st.session_state: st.session_state[k]=""
+
 c1,c2,c3,c4,c5 = st.columns(5)
 with c1:
-    dni=st.text_input("DNI/RUC")
+    dni=st.text_input("DNI/RUC", key="dni_input", placeholder="")
     if st.button("🔍 Buscar"):
         if dni in st.session_state.clientes:
-            st.session_state['nom']=st.session_state.clientes[dni][1]
+            st.session_state.nombre_input=st.session_state.clientes[dni][1]
+            st.rerun()
         else:
             try:
                 tipo="dni" if len(dni)==8 else "ruc"
                 h={"Authorization": f"Bearer {api_token}"} if api_token else {}
                 r=requests.get(f"https://api.apis.net.pe/v1/{tipo}?numero={dni}",headers=h,timeout=6).json()
                 nom=r.get('nombre') or r.get('razonSocial') or ""
-                if nom: st.session_state['nom']=nom
-            except: pass
-with c2: nombre=st.text_input("Nombre", value=st.session_state.get('nom',''))
-with c3: destino=st.text_input("DESTINO", value="AREQUIPA")
-with c4: factura=st.text_input("FACTURA", value="F001-XXXXXX")
-with c5: celular=st.text_input("CELULAR", value="959237626")
+                if nom: st.session_state.nombre_input=nom; st.rerun()
+            except: st.warning("Escribe manual")
+with c2: nombre=st.text_input("Nombre", key="nombre_input", placeholder="")
+with c3: destino=st.text_input("DESTINO", key="destino_input", placeholder="")
+with c4: factura=st.text_input("FACTURA", key="factura_input", placeholder="")
+with c5: celular=st.text_input("CELULAR", key="celular_input", placeholder="")
 
-c6,c7,c8 = st.columns(3)
-with c6: b1=st.number_input("Bulto",1,100,1)
-with c7: b2=st.number_input("Total",1,100,4)
+c6,c7,c8 = st.columns([1,1,2])
+with c6: b1=st.number_input("Bulto N°",1,100,1)
+with c7: b2=st.number_input("Total",1,100,1)
 with c8:
-    if st.button("➕ Agregar",type="primary"):
-        st.session_state.lista.append({"dni":dni,"nombre":nombre,"destino":destino.upper(),"factura":factura,"celular":celular,"b1":b1,"b2":b2})
-        guardar_cliente(dni,nombre,celular)
+    st.write("")
+    if st.button("➕ Agregar", type="primary", use_container_width=True):
+        if dni and nombre and destino:
+            st.session_state.lista.append({"dni":dni,"nombre":nombre,"destino":destino.upper(),"factura":factura,"celular":celular,"b1":b1,"b2":b2})
+            guardar_cliente(dni,nombre,celular)
+            for k in ['dni_input','nombre_input','destino_input','factura_input','celular_input']:
+                st.session_state[k]=""
+            st.rerun()
+        else: st.error("Falta DNI / Nombre / Destino")
 
 if st.session_state.lista:
+    st.divider()
     st.dataframe(st.session_state.lista,use_container_width=True)
-    if st.button(f"📄 GENERAR PDF ({len(st.session_state.lista)})",type="primary"):
-        pdf=FPDF(orientation='L', format='A4')
-        for item in st.session_state.lista:
-            pdf.add_page()
-            x,y,w,h = 10,10,277,190
-            pdf.rect(x,y,w,h)
-            pdf.set_xy(x+5,y+2); pdf.set_font("Arial","B",45)
-            pdf.cell(170,25,item['destino'],align="L")
-            pdf.set_xy(x+140,y+2); pdf.set_font("Arial","B",28)
-            pdf.cell(40,25,f"({item['b1']}/{item['b2']})",align="C")
+    col1,col2=st.columns(2)
+    with col1:
+        if st.button(f"📄 GENERAR PDF ({len(st.session_state.lista)})", type="primary", use_container_width=True):
+            def dibujar(pdf, item, x, y, w, h):
+                pdf.rect(x,y,w,h)
+                pdf.set_xy(x+3,y+2); pdf.set_font("Arial","B",22 if w<150 else 32)
+                pdf.cell(w*0.6,12 if w<150 else 18,item['destino'],align="L")
+                pdf.set_xy(x+w*0.6,y+2); pdf.set_font("Arial","B",12 if w<150 else 20)
+                pdf.cell(w*0.15,12 if w<150 else 18,f"({item['b1']}/{item['b2']})",align="C")
+                logo_path = "logo_dg.png" if os.path.exists("logo_dg.png") else "logo_imagen1.png" if os.path.exists("logo_imagen1.png") else None
+                if logo_path:
+                    pdf.image(logo_path, x=x+w-30 if w<150 else x+w-48, y=y+1, w=28 if w<150 else 44, h=28 if w<150 else 44)
+                pdf.line(x, y+16 if w<150 else y+26, x+w, y+16 if w<150 else y+26)
+                pdf.set_xy(x+3,y+18 if w<150 else y+28); pdf.set_font("Arial","B",8 if w<150 else 13)
+                pdf.cell(w-6,5 if w<150 else 7,f"ATT: {item['nombre'].upper()[:38]}",ln=True)
+                pdf.set_x(x+3); pdf.set_font("Arial","",6 if w<150 else 9)
+                pdf.cell(w-6,4 if w<150 else 5,f"DNI: {item['dni']} | FACT: {item['factura']}",ln=True)
+                pdf.set_x(x+3); pdf.set_font("Arial","B",7 if w<150 else 11)
+                pdf.cell(w-6,4 if w<150 else 5,f"CEL: {item['celular']}",ln=True)
+                yy = y+h-20 if w<150 else y+h-32
+                pdf.line(x, yy-3, x+w, yy-3)
+                marcas_path = "marcas.png" if os.path.exists("marcas.png") else "logo_imagen2.png" if os.path.exists("logo_imagen2.png") else None
+                if marcas_path:
+                    pdf.image(marcas_path, x=x+2, y=yy, w=w-24 if w<150 else w-40, h=16 if w<150 else 24)
+                qr = qrcode.make(f"{item['nombre']}|{item['destino']}|{item['dni']}")
+                qr.save("qr.png")
+                pdf.image("qr.png", x=x+w-20 if w<150 else x+w-32, y=yy, w=18 if w<150 else 28, h=18 if w<150 else 28)
 
-            # Logo: busca cualquiera que exista
-            logo_path = None
-            for cand in ["logo_dg.png","logo_imagen1.png","logo_imagen.png"]:
-                if os.path.exists(cand): logo_path=cand; break
-            if logo_path:
-                pdf.image(logo_path, x=x+w-75, y=y+2, w=70, h=70)
+            # LÓGICA DE IMPRESORA
+            if "Térmica" in tipo_impresora:
+                if "100x150" in formato:
+                    pdf=FPDF(orientation='P', unit='mm', format=(100,150))
+                else:
+                    pdf=FPDF(orientation='P', unit='mm', format=(80,100))
+                for item in st.session_state.lista:
+                    pdf.add_page()
+                    dibujar(pdf,item,0,0,100 if "100x150" in formato else 80,150 if "100x150" in formato else 100)
+            else: # Normal
+                if "Vertical" in formato:
+                    pdf=FPDF(orientation='P', format='A4')
+                    for i,item in enumerate(st.session_state.lista):
+                        if i%4==0: pdf.add_page()
+                        pos=i%4; x=10 if pos%2==0 else 110; y=10 if pos<2 else 150
+                        dibujar(pdf,item,x,y,90,130)
+                else:
+                    pdf=FPDF(orientation='L', format='A4')
+                    for item in st.session_state.lista:
+                        pdf.add_page()
+                        dibujar(pdf,item,10,10,277,190)
 
-            pdf.line(x, y+28, x+w, y+28)
-            pdf.set_xy(x+5,y+30); pdf.set_font("Arial","B",20)
-            pdf.cell(190,10,f"ATT: {item['nombre'].upper()[:45]}",ln=True)
-            pdf.set_x(x+5); pdf.set_font("Arial","",13)
-            pdf.cell(190,7,f"DNI/RUC: {item['dni']} | FACTURA: {item['factura']}",ln=True)
-            pdf.set_x(x+5); pdf.set_font("Arial","B",14)
-            pdf.cell(190,8,f"CELULAR: {item['celular']}",ln=True)
-
-            yy = y+110
-            marcas_path = None
-            for cand in ["marcas.png","logo_imagen2.png","logo_imagen2.png"]:
-                if os.path.exists(cand): marcas_path=cand; break
-            if marcas_path:
-                pdf.image(marcas_path, x=x+5, y=yy, w=180, h=30)
-
-            qr = qrcode.make(f"{item['nombre']}|{item['destino']}|{item['dni']}")
-            qr.save("qr.png")
-            pdf.image("qr.png", x=x+w-40, y=yy, w=35, h=35)
-
-        pdf_bytes = bytes(pdf.output())
-        st.download_button("⬇️ DESCARGAR PDF", pdf_bytes, "etiquetas_DramirenG.pdf", mime="application/pdf")
-        st.balloons()
+            pdf_bytes = bytes(pdf.output())
+            st.download_button("⬇️ DESCARGAR PDF", pdf_bytes, "etiquetas_DramirenG.pdf", mime="application/pdf", use_container_width=True)
+            st.balloons()
+    with col2:
+        if st.button("🗑️ Limpiar lista", use_container_width=True):
+            st.session_state.lista=[]; st.rerun()
+else:
+    st.info("Casillas vacías. Agrega clientes uno por uno. Luego elige impresora a la izquierda.")
