@@ -1,181 +1,122 @@
 import streamlit as st
 from fpdf import FPDF
-import requests, os
-from datetime import datetime
+import requests, os, qrcode
 
-st.set_page_config(page_title="DramirenG - Despacho", layout="wide")
+st.set_page_config(page_title="DramirenG", layout="wide")
 if "login" not in st.session_state: st.session_state.login=False
 if "lista" not in st.session_state: st.session_state.lista=[]
 if "clientes" not in st.session_state: st.session_state.clientes={}
 
-# Cargar clientes
 if os.path.exists("clientes_guardados.txt"):
     try:
         with open("clientes_guardados.txt","r",encoding="utf-8") as f:
-            for line in f:
-                p=line.strip().split("|")
+            for l in f:
+                p=l.strip().split("|")
                 if len(p)>=2: st.session_state.clientes[p[0]]=p
     except: pass
 
-def guardar_cliente(dni,nombre,destino,direc):
+def guardar_cliente(dni,nom,cel):
     with open("clientes_guardados.txt","a",encoding="utf-8") as f:
-        f.write(f"{dni}|{nombre}|{destino}|{direc}\n")
-    st.session_state.clientes[dni]=[dni,nombre,destino,direc]
+        f.write(f"{dni}|{nom}||{cel}\n")
 
-# LOGIN
 if not st.session_state.login:
-    st.title("🔐 DramirenG - Login")
+    st.title("🔐 DramirenG")
     u=st.text_input("Usuario"); p=st.text_input("Clave",type="password")
     if st.button("Ingresar"):
         if u=="admin" and p=="dramiren2026":
             st.session_state.login=True; st.rerun()
-        else: st.error("Incorrecto")
+        else: st.error("Error")
     st.stop()
 
-# SIDEBAR
-st.sidebar.title("⚙️ Configuración")
-st.sidebar.success("Conectado: admin")
+st.sidebar.title("⚙️")
+api_token = st.sidebar.text_input("Token API (opcional)", type="password")
+up_logo = st.sidebar.file_uploader("Sube tu logo DG", type=["png","jpg","jpeg"])
+if up_logo: open("logo_dg.png","wb").write(up_logo.getbuffer())
+up_marcas = st.sidebar.file_uploader("Sube marcas (Nike etc) - opcional", type=["png","jpg"])
+if up_marcas: open("marcas.png","wb").write(up_marcas.getbuffer())
 
-st.sidebar.subheader("🔑 API (opcional)")
-st.sidebar.caption("Si la búsqueda falla, pega tu API aquí")
-api_token = st.sidebar.text_input("Token API apis.net.pe", placeholder="Pega tu token si tienes", type="password")
-api_url_custom = st.sidebar.text_input("URL API propia (opcional)", placeholder="https://tu-api.com/ruc=")
+if st.sidebar.button("Cerrar"): st.session_state.login=False; st.rerun()
 
-logo1_on = st.sidebar.checkbox("Usar Logo 1", value=True)
-logo2_on = st.sidebar.checkbox("Usar Logo 2", value=False)
-up1 = st.sidebar.file_uploader("Cambiar Logo 1", type=["png","jpg","jpeg"])
-up2 = st.sidebar.file_uploader("Cambiar Logo 2", type=["png","jpg","jpeg"])
-if up1: open("logo_imagen1.png","wb").write(up1.getbuffer())
-if up2: open("logo_imagen2.png","wb").write(up2.getbuffer())
-
-formato = st.sidebar.selectbox("🖨️ Impresora", ["A3 - 1 gigante (Recomendado)", "A4 - 4 por hoja", "Termica 100x150mm"], index=0)
-if st.sidebar.button("Cerrar sesión"):
-    st.session_state.login=False; st.rerun()
-
-# APP
-st.title("🏷️ DramirenG - Despacho Masivo")
-c1,c2,c3 = st.columns([1,1,1])
-
+st.title("🏷️ DramirenG - Etiqueta Horizontal")
+c1,c2,c3,c4,c5 = st.columns(5)
 with c1:
-    dni = st.text_input("DNI / RUC", placeholder="", value="") # VACIO, sin ejemplo
+    dni=st.text_input("DNI/RUC")
     if st.button("🔍 Buscar"):
         if dni in st.session_state.clientes:
-            d=st.session_state.clientes[dni]
-            st.session_state['nombre_temp']=d[1]
-            st.session_state['direc_temp']=d[3] if len(d)>3 else ""
-            st.success(f"Guardado: {d[1]}")
+            st.session_state['nom']=st.session_state.clientes[dni][1]
         else:
-            encontrado=False
-            # 1. Si puso URL propia
-            if api_url_custom:
-                try:
-                    r=requests.get(f"{api_url_custom}{dni}",timeout=6).json()
-                    nom=r.get('nombre') or r.get('razonSocial') or r.get('nombreCompleto') or ""
-                    if nom:
-                        st.session_state['nombre_temp']=nom
-                        st.success(nom); encontrado=True
-                except: pass
-            # 2. Si puso token
-            if not encontrado and api_token:
-                try:
-                    tipo="dni" if len(dni)==8 else "ruc"
-                    url=f"https://api.apis.net.pe/v1/{tipo}?numero={dni}"
-                    r=requests.get(url,headers={"Authorization":f"Bearer {api_token}"},timeout=6).json()
-                    nom=r.get('nombre') or r.get('razonSocial') or ""
-                    if nom:
-                        st.session_state['nombre_temp']=nom
-                        st.success(nom); encontrado=True
-                except: pass
-            # 3. Intento sin token (puede fallar)
-            if not encontrado:
-                try:
-                    tipo="dni" if len(dni)==8 else "ruc"
-                    url=f"https://api.apis.net.pe/v1/{tipo}?numero={dni}"
-                    r=requests.get(url,timeout=6).json()
-                    nom=r.get('nombre') or r.get('razonSocial') or ""
-                    if nom:
-                        st.session_state['nombre_temp']=nom
-                        st.success(nom); encontrado=True
-                except: pass
-            if not encontrado:
-                st.warning("No se encontró online. Escribe manual. Si sigue fallando, pega tu token a la izquierda.")
+            try:
+                tipo="dni" if len(dni)==8 else "ruc"
+                h={"Authorization": f"Bearer {api_token}"} if api_token else {}
+                r=requests.get(f"https://api.apis.net.pe/v1/{tipo}?numero={dni}",headers=h,timeout=6).json()
+                nom=r.get('nombre') or r.get('razonSocial') or ""
+                if nom: st.session_state['nom']=nom; st.success(nom)
+            except: pass
+with c2: nombre=st.text_input("Nombre", value=st.session_state.get('nom',''))
+with c3: destino=st.text_input("DESTINO", value="AREQUIPA")
+with c4: factura=st.text_input("FACTURA", value="F001-XXXXXX")
+with c5: celular=st.text_input("CELULAR", value="959237626")
 
-with c2:
-    nombre = st.text_input("Nombre Cliente", value=st.session_state.get('nombre_temp',''), placeholder="")
-    destino = st.selectbox("Destino", ["","LIMA","ICA","PIURA","SULLANA","TRUJILLO","CHICLAYO","AREQUIPA","CUSCO","TUMBES","CHIMBOTE","HUANCAYO","TACNA","JULIACA","PUNO","OTRO"])
-    if destino=="OTRO": destino=st.text_input("Escribe destino")
-
-with c3:
-    direccion = st.text_input("Dirección (opcional)", value=st.session_state.get('direc_temp',''), placeholder="")
-    nota = st.text_input("Nota opcional", placeholder="")
-    col_a,col_b=st.columns(2)
-    with col_a:
-        if st.button("➕ Agregar a lista",type="primary"):
-            if dni and nombre and destino:
-                st.session_state.lista.append({"dni":dni,"nombre":nombre,"destino":destino,"direc":direccion,"nota":nota})
-                guardar_cliente(dni,nombre,destino,direccion)
-                st.success(f"Agregado: {nombre}")
-                # Limpiar para siguiente
-                st.session_state['nombre_temp']=""; st.session_state['direc_temp']=""
-            else: st.error("Falta DNI/Nombre/Destino")
-    with col_b:
-        if st.button("🗑️ Limpiar lista"): st.session_state.lista=[]; st.rerun()
+c6,c7,c8 = st.columns(3)
+with c6: b1=st.number_input("Bulto",1,100,1)
+with c7: b2=st.number_input("Total",1,100,4)
+with c8:
+    st.write("")
+    if st.button("➕ Agregar",type="primary"):
+        st.session_state.lista.append({"dni":dni,"nombre":nombre,"destino":destino.upper(),"factura":factura,"celular":celular,"b1":b1,"b2":b2})
+        guardar_cliente(dni,nombre,celular)
+        st.success("Agregado")
 
 if st.session_state.lista:
-    st.divider()
-    st.subheader(f"📦 Lista: {len(st.session_state.lista)} etiquetas")
-    st.dataframe(st.session_state.lista, use_container_width=True)
-    if st.button(f"📄 GENERAR PDF MASIVO ({len(st.session_state.lista)})",type="primary"):
-        pdf=FPDF(orientation='P',unit='mm',format=(100,150) if "Termica" in formato else 'A4' if "A4" in formato else 'A3')
-        def dibujar(pdf,data,x,y,w,h):
-            # Fondo blanco y borde grueso
-            pdf.set_fill_color(255,255,255)
-            pdf.rect(x,y,w,h,'DF')
-            # Logo grande a la izquierda
-            if logo1_on and os.path.exists("logo_imagen1.png"):
-                try: pdf.image("logo_imagen1.png", x=x+3, y=y+3, w=22, h=18)
-                except: pass
-            # DESTINO GIGANTE
-            pdf.set_xy(x, y+2)
-            pdf.set_font("Arial","B",22)
-            pdf.cell(w,12,f"{data['destino'].upper()}",align="C",ln=True)
-            
-            # NOMBRE GIGANTE CENTRADO
-            pdf.set_xy(x+5, y+30)
-            pdf.set_font("Arial","B",16)
-            pdf.multi_cell(w-10, 9, f"{data['nombre'].upper()}", align="C")
-            
-            # DNI GRANDE ABAJO
-            pdf.set_xy(x, y+h-25)
-            pdf.set_font("Arial","B",14)
-            pdf.cell(w,10,f"{data['dni']}",align="C",ln=True)
-            
-            # Direccion / Nota chiquito
-            if data['direc']:
-                pdf.set_xy(x, y+h-15)
-                pdf.set_font("Arial","",9)
-                pdf.cell(w,5,f"{data['direc'][:40]}",align="C",ln=True)
-            
-            # Logo 2 a la derecha si quiere
-            if logo2_on and os.path.exists("logo_imagen2.png"):
-                try: pdf.image("logo_imagen2.png", x=x+w-25, y=y+3, w=20)
-                except: pass
-            pdf.set_xy(x,y+10); pdf.set_font("Arial","B",10); pdf.cell(w,6,f"{data['nombre'][:30]}",align="C",ln=True)
-            pdf.set_x(x); pdf.set_font("Arial","",8); pdf.cell(w,5,f"{data['dni']}",align="C",ln=True)
-            if data['direc']: pdf.set_x(x); pdf.cell(w,5,f"{data['direc'][:35]}",align="C",ln=True)
-            if data['nota']: pdf.set_x(x); pdf.set_font("Arial","I",8); pdf.cell(w,5,f"{data['nota']}",align="C",ln=True)
+    st.dataframe(st.session_state.lista,use_container_width=True)
+    if st.button(f"📄 GENERAR PDF ({len(st.session_state.lista)})",type="primary"):
+        pdf=FPDF(orientation='L', format='A4') # Horizontal
+        for item in st.session_state.lista:
+            pdf.add_page()
+            x,y,w,h = 10,10,277,190
             pdf.rect(x,y,w,h)
-        if "Termica" in formato:
-            for it in st.session_state.lista: pdf.add_page(); dibujar(pdf,it,0,0,100,150)
-        elif "A3" in formato:
-            for it in st.session_state.lista: pdf.add_page(); dibujar(pdf,it,10,10,277,400)
-        else:
-            for i,it in enumerate(st.session_state.lista):
-                if i%4==0: pdf.add_page()
-                pos=i%4; x=10 if pos%2==0 else 110; y=10 if pos<2 else 150
-                dibujar(pdf,it,x,y,90,120)
+
+            # Destino
+            pdf.set_xy(x+5,y+2); pdf.set_font("Arial","B",45)
+            pdf.cell(170,25,item['destino'],align="L")
+            pdf.set_xy(x+140,y+2); pdf.set_font("Arial","B",28)
+            pdf.cell(40,25,f"({item['b1']}/{item['b2']})",align="C")
+
+            # Logo DG derecha (grande)
+            if os.path.exists("logo_dg.png"):
+                pdf.image("logo_dg.png", x=x+w-75, y=y+2, w=70, h=70)
+            elif os.path.exists("logo_imagen1.png"):
+                pdf.image("logo_imagen1.png", x=x+w-75, y=y+2, w=70, h=70)
+
+            # Linea
+            pdf.line(x, y+28, x+w, y+28)
+
+            # Datos
+            pdf.set_xy(x+5,y+30); pdf.set_font("Arial","B",20)
+            pdf.cell(190,10,f"ATT: {item['nombre'].upper()[:45]}",ln=True)
+            pdf.set_x(x+5); pdf.set_font("Arial","",13)
+            pdf.cell(190,7,f"DNI/RUC: {item['dni']} | FACTURA: {item['factura']}",ln=True)
+            pdf.set_x(x+5); pdf.set_font("Arial","B",14)
+            pdf.cell(190,8,f"CELULAR: {item['celular']}",ln=True)
+
+            # Marcas abajo
+            yy = y+110
+            if os.path.exists("marcas.png"):
+                pdf.image("marcas.png", x=x+5, y=yy, w=180, h=30)
+            else:
+                pdf.set_xy(x+5,yy); pdf.set_font("Arial","B",12)
+                # Dibuja texto si no hay imagen
+                pdf.image("https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg", x=x+10, y=yy, w=35)
+                # Fallback texto
+                pdf.set_xy(x+5,yy+5); pdf.cell(180,20,"NIKE PUMA adidas Reebok",align="L")
+
+            # QR
+            qr = qrcode.make(f"{item['nombre']}|{item['destino']}|{item['dni']}|{item['celular']}")
+            qr.save("qr.png")
+            pdf.image("qr.png", x=x+w-40, y=yy, w=35, h=35)
+
         pdf_bytes=pdf.output(dest='S').encode('latin-1')
-        st.download_button("⬇️ DESCARGAR PDF",pdf_bytes,file_name=f"despacho_{datetime.now().strftime('%d%m')}.pdf")
+        st.download_button("⬇️ DESCARGAR PDF", pdf_bytes, "etiquetas_DramirenG.pdf")
         st.balloons()
-else:
-    st.info("👆 Agrega clientes arriba. Se guardan automático.")
+
+st.info("Sube tu logo DG en la izquierda. Sin logo igual funciona.")
