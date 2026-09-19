@@ -5,8 +5,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 import io
 
-st.set_page_config(page_title="Etiquetas DramireG", layout="centered")
-st.title("🏷️ Etiquetas - DramireG Sullana")
+st.set_page_config(page_title="Etiquetas DramirenG", layout="centered")
+st.title("🏷️ Etiquetas - DramirenG")
 st.write("Sube tu Excel y genera tu PDF listo para imprimir")
 
 archivo = st.file_uploader("📁 Sube tu Excel", type=["xlsx","xls"])
@@ -44,6 +44,6 @@ if archivo:
         buffer.seek(0)
         
         st.balloons()
-        st.download_button("📥 Descargar PDF", buffer, "etiquetas_dramireG.pdf", "application/pdf")
+        st.download_button("📥 Descargar PDF", buffer, "etiquetas_dramirenG.pdf", "application/pdf")
 else:
     st.info("👆 Sube tu archivo Excel para empezar")
