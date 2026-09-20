@@ -10,30 +10,48 @@ st.set_page_config(page_title="Etiquetas PRO", layout="wide", page_icon="🏷️
 if 'logged' not in st.session_state: st.session_state.logged=False
 if 'data' not in st.session_state: st.session_state.data=[]
 if 'print_now' not in st.session_state: st.session_state.print_now=False
-if "dni" not in st.session_state: st.session_state.dni=""
-if "nombre" not in st.session_state: st.session_state.nombre=""
-if "factura" not in st.session_state: st.session_state.factura=""
-if "nombre2" not in st.session_state: st.session_state.nombre2=""
-if "dni2" not in st.session_state: st.session_state.dni2=""
-if "celular" not in st.session_state: st.session_state.celular=""
-if "bulto" not in st.session_state: st.session_state.bulto=1
-if "total" not in st.session_state: st.session_state.total=1
+for k,v in [("dni",""),("nombre",""),("factura",""),("nombre2",""),("dni2",""),("celular",""),("bulto",1),("total",1)]:
+    if k not in st.session_state: st.session_state[k]=v
+
+def buscar_dni_ruc(doc, token):
+    doc=doc.strip()
+    # 1. Si tiene token apis.net.pe
+    if token:
+        try:
+            if len(doc)==8:
+                r=requests.get(f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=8)
+                if r.status_code==200:
+                    d=r.json()
+                    return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+            if len(doc)==11:
+                r=requests.get(f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=8)
+                if r.status_code==200: return r.json().get('nombre') or r.json().get('razonSocial')
+        except: pass
+    # 2. API GRATIS sin token - DECOLECTA / API PERU
+    apis_libres = [
+        f"https://api.decolecta.com/v1/reniec/dni?numero={doc}" if len(doc)==8 else f"https://api.decolecta.com/v1/sunat/ruc?numero={doc}",
+        f"https://api.apis.net.pe/v1/dni?numero={doc}" if len(doc)==8 else f"https://api.apis.net.pe/v1/ruc?numero={doc}",
+        f"https://dniruc.apisperu.com/api/v1/dni/{doc}" if len(doc)==8 else f"https://dniruc.apisperu.com/api/v1/ruc/{doc}"
+    ]
+    for url in apis_libres:
+        try:
+            r=requests.get(url, timeout=6)
+            if r.status_code==200:
+                d=r.json()
+                if len(doc)==8:
+                    if 'nombres' in d: return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+                    if 'nombre' in d: return d['nombre']
+                    if 'data' in d: return d['data']
+                else:
+                    if 'razonSocial' in d: return d['razonSocial']
+                    if 'nombre' in d: return d['nombre']
+        except: continue
+    return None
 
 def footer_soporte():
-    st.markdown("""<div style="position:fixed; bottom:0; left:0; width:100%; background:#002244; padding:10px 0; text-align:center; z-index:999;">
-    <p style="margin:0; color:#99ccff; font-size:11px; font-weight:bold;">Soporte Técnico de Control Soporte.DramirenG:</p>
-    <p style="margin:0; color:white; font-size:11px;">📞 Celular: 959237626 | ✉️ Correo: Soporte.DramirenG@hotmail.com</p></div><div style="height:80px;"></div>""", unsafe_allow_html=True)
-
-def buscar_dni_ruc_api(doc, token):
-    try:
-        if len(doc)==8:
-            r=requests.get(f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=10)
-            if r.status_code==200: d=r.json(); return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
-        elif len(doc)==11:
-            r=requests.get(f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=10)
-            if r.status_code==200: d=r.json(); return d.get('nombre','') or d.get('razonSocial','')
-    except: return None
-    return None
+    st.markdown("""<div style="position:fixed; bottom:0; left:0; width:100%; background:#002244; padding:8px 0; text-align:center; z-index:999;">
+    <p style="margin:0; color:#99ccff; font-size:11px; font-weight:bold;">Soporte Técnico Soporte.DramirenG:</p>
+    <p style="margin:0; color:white; font-size:11px;">📞 959237626 | ✉️ Soporte.DramirenG@hotmail.com</p></div><div style="height:70px;"></div>""", unsafe_allow_html=True)
 
 if not st.session_state.logged:
     st.markdown("<style>.stApp{background:#f2f3f7!important;} div[data-testid='stTextInput'] input{background:white!important; color:#111827!important; border:2px solid #111827!important; border-radius:12px!important; height:50px!important;} div[data-testid='stTextInput'] label p{color:#111827!important; font-weight:800!important;}</style>", unsafe_allow_html=True)
@@ -46,26 +64,27 @@ if not st.session_state.logged:
             else: st.error("Usuario o clave incorrecta")
     footer_soporte(); st.stop()
 
-# CSS QUE ARREGLA TODO LO NEGRO DE TU FOTO
+# CSS QUE QUITA LO NEGRO Y QUITA ESPACIOS
 st.markdown("""
 <style>
 .stApp{background:#f8f9fb!important;}
-section[data-testid="stSidebar"]{background:white!important; border-right:1px solid #e5e7eb!important;}
+section[data-testid="stSidebar"]{background:white!important; border-right:1px solid #e5e7eb!important; padding-top:10px!important;}
 section[data-testid="stSidebar"] *{color:#111827!important;}
 div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p{color:#111827!important; font-weight:800!important; font-size:11px!important;}
 div[data-testid="stTextInput"] input{background:white!important; color:#111827!important; border:1.5px solid #d1d5db!important; border-radius:10px!important; height:44px!important;}
-/* ARREGLA DESTINO Y NUMEROS NEGROS */
-div[data-baseweb="select"] > div{background:white!important; border:1.5px solid #d1d5db!important; color:#111827!important;}
-div[data-baseweb="select"] span{color:#111827!important; font-weight:600!important;}
-div[data-testid="stNumberInput"] input{background:white!important; color:#111827!important;}
+/* ARREGLA DESTINO NEGRO DE TU FOTO */
+div[data-baseweb="select"] > div{background:white!important; border:1.5px solid #d1d5db!important; color:#111827!important; min-height:44px!important;}
+div[data-baseweb="select"] span{color:#111827!important; font-weight:600!important; background:white!important;}
+div[data-baseweb="select"] div{background:white!important;}
+div[data-testid="stNumberInput"] input{background:white!important; color:#111827!important; border:1.5px solid #d1d5db!important;}
 div[data-testid="stNumberInput"] button{background:white!important; border:1px solid #d1d5db!important;}
 div[data-testid="stNumberInput"] button svg{fill:#111827!important;}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{background:#fefce8!important; border:1.5px solid #fde68a!important; border-radius:12px!important;}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{background:#fefce8!important; border:1px dashed #facc15!important;}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{background:#fefce8!important; border:1.5px solid #fde68a!important; border-radius:12px!important; margin-top:5px!important;}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{background:#fefce8!important; border:1px dashed #facc15!important; padding:5px!important;}
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{background:#fde047!important; color:#422006!important; border:1px solid #facc15!important; font-weight:700!important;}
-/* TABLA VISIBLE */
-div[data-testid="stDataFrame"]{background:white!important; border:1.5px solid #e5e7eb!important; border-radius:12px!important;}
-div[data-testid="stDataFrame"] *{color:#111827!important;}
+/* QUITAR ESPACIOS GRANDES */
+section[data-testid="stSidebar"].stMarkdown{margin-bottom:2px!important;}
+div[data-testid="stDataFrame"]{background:white!important; border:1.5px solid #e5e7eb!important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,35 +101,33 @@ with col_logout:
 
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
-    formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","A4 HORIZONTAL - 2 POR HOJA","TÉRMICA 100X150"], index=0)
-    st.markdown("---")
-    st.markdown("**🔑 API DNI/RUC (apis.net.pe)**")
-    api_token=st.text_input("TOKEN API", type="password", placeholder="Pega tu token aquí")
-    st.caption("Consíguelo gratis en apis.net.pe")
-    st.markdown("---")
-    st.markdown("**TU LOGO DE TU EMPRESA (arriba derecha)**")
+    st.markdown("<p style='font-size:11px; font-weight:800; margin:0;'>FORMATO</p>", unsafe_allow_html=True)
+    formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","A4 HORIZONTAL - 2 POR HOJA","TÉRMICA 100X150"], label_visibility="collapsed")
+    st.markdown("<p style='font-size:11px; font-weight:800; margin:10px 0 2px 0;'>🔑 API DNI/RUC</p>", unsafe_allow_html=True)
+    api_token=st.text_input("TOKEN API", type="password", placeholder="Token opcional - funciona sin token", label_visibility="collapsed")
+    st.markdown("<p style='font-size:10px; color:#6b7280; margin:0;'>Funciona con o sin token (apis.net.pe)</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:11px; font-weight:800; margin:12px 0 2px 0;'>TU LOGO DE TU EMPRESA (arriba derecha)</p>", unsafe_allow_html=True)
     logo_empresa=st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="logo_emp", label_visibility="collapsed")
-    st.markdown("**LOGO DE MARCAS ABAJO (Opcional)**")
+    st.markdown("<p style='font-size:11px; font-weight:800; margin:8px 0 2px 0;'>LOGO DE MARCAS ABAJO (Opcional)</p>", unsafe_allow_html=True)
     logo_marcas=st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="logo_mar", label_visibility="collapsed")
 
-PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LIMA - HUACHO","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA","AMAZONAS - CHACHAPOYAS","APURIMAC - ABANCAY","AYACUCHO - AYACUCHO","HUANCAVELICA - HUANCAVELICA","HUANUCO - HUANUCO","MOQUEGUA - MOQUEGUA","PASCO - CERRO DE PASCO","SAN MARTIN - MOYOBAMBA"])
+PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LIMA - HUACHO","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA"])
 
-# TITULO EN NEGRO YA NO BLANCO
-st.markdown("<h3 style='color:#111827; margin-top:20px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='color:#111827; margin-top:15px; margin-bottom:5px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
 
 c1,c2,c3,c4=st.columns([1.1,1.9,1.1,0.6])
 with c1: dni=st.text_input("DNI/RUC 1", key="dni", placeholder="75098930")
 with c2: nombre=st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="nombre")
 with c3: factura=st.text_input("N° FACTURA / GUIA", key="factura", placeholder="F001-XXXXX")
-with c4: 
-    st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-    if st.button("🔍 Buscar", use_container_width=True):
-        if not api_token: st.error("Pon tu token en la barra lateral")
-        elif dni:
-            res=buscar_dni_ruc_api(dni.strip(), api_token)
-            if res: st.session_state.nombre=res; st.rerun()
-            else: st.error("No encontrado")
-        else: st.warning("Escribe DNI/RUC")
+with c4:
+    st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
+    if st.button("🔍 Buscar", use_container_width=True, type="primary"):
+        if not dni.strip(): st.warning("Escribe DNI")
+        else:
+            with st.spinner("Buscando..."):
+                res=buscar_dni_ruc(dni, api_token)
+                if res: st.session_state.nombre=res; st.success(f"Encontrado: {res}"); st.rerun()
+                else: st.error("No encontrado, verifica DNI/RUC")
 
 c5,c6,c7=st.columns([2,1.2,1])
 with c5: nombre2=st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="nombre2")
@@ -122,7 +139,7 @@ with c8: destino=st.selectbox("DESTINO (escribe para filtrar)", PROVINCIAS_PERU)
 with c9: bulto=st.number_input("BULTO INICIO", min_value=1, step=1, key="bulto")
 with c10: total=st.number_input("TOTAL", min_value=1, step=1, key="total")
 with c11:
-    st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
     if st.button("➕ Agregar", use_container_width=True, type="primary"):
         for i in range(bulto, total+1):
             st.session_state.data.append({"DESTINO":destino,"BULTOS":f"{i}/{total}","ATT 1":nombre,"DNI 1":dni,"FACTURA":factura,"ATT 2":nombre2,"DNI 2":dni2,"CELULAR":celular})
