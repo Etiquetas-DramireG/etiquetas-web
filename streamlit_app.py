@@ -89,7 +89,10 @@ def footer_soporte():
     <p style="margin:0; color:#99ccff; font-size:11px; font-weight:bold;">Soporte Técnico Soporte.DramirenG:</p>
     <p style="margin:0; color:white; font-size:11px;">📞 959237626 | ✉️ Soporte.DramirenG@hotmail.com</p></div><div style="height:70px;"></div>""", unsafe_allow_html=True)
 
-# --- VISTA DE LOGIN ---
+# =====================================================================
+# --- CONTROL DE VISTAS (LOGIN VS APP PRINCIPAL) ---
+# =====================================================================
+
 if not st.session_state.logged:
     st.markdown("""
     <style>
@@ -125,7 +128,7 @@ if not st.session_state.logged:
     </style>
     """, unsafe_allow_html=True)
 
-    c1,c2,c3 = st.columns([1,0.9,1])
+    c1, c2, c3 = st.columns([1, 0.9, 1])
     with c2:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown('<div class="login-card"><div class="login-header">Iniciar Sesión</div><div class="login-body">', unsafe_allow_html=True)
@@ -135,197 +138,139 @@ if not st.session_state.logged:
         
         aceptar = st.button("→ Aceptar", type="primary", use_container_width=True)
         
-        col1,col2 = st.columns([2.5,1])
+        col1, col2 = st.columns([2.5, 1])
         with col2:
             cancelar = st.button("Cancelar", key="cancelar_final")
         
         st.markdown('</div></div>', unsafe_allow_html=True)
 
         if aceptar:
-            if u=="admin" and p=="dramireng123":
-                st.session_state.logged=True
+            if u == "admin" and p == "dramireng123":
+                st.session_state.logged = True
                 st.rerun()
             else:
                 st.error("Usuario o contraseña incorrecta")
         if cancelar:
-            st.session_state.login_user_final=""
-            st.session_state.login_pass_final=""
+            st.session_state.login_user_final = ""
+            st.session_state.login_pass_final = ""
             st.rerun()
 
     footer_soporte()
-    st.stop()
 
-# --- APP PRINCIPAL ---
-st.markdown("""
-<style>
-.stApp{background:#ffffff!important;}
-section[data-testid="stSidebar"]{background:#ffffff!important;}
-section[data-testid="stSidebar"] h3, section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] label p, section[data-testid="stSidebar"] span{color:#000000!important; font-weight:800!important; opacity:1!important;}
-div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p{color:#000000!important; font-weight:900!important; font-size:13px!important;}
-div[data-testid="stTextInput"] input{background:#ffffff!important; color:#000000!important; border:2px solid #000000!important; height:46px!important; font-weight:700!important;}
-div[data-baseweb="select"] > div{background:#ffffff!important; border:2px solid #000000!important;}
-div[data-baseweb="select"] span{color:#000000!important; font-weight:700!important;}
-div[data-testid="stNumberInput"] input{background:#ffffff!important; color:#000000!important; border:2px solid #000000!important;}
-div[data-testid="stFileUploader"]{background:#FFFBEB!important; border:2px dashed #FACC15!important; border-radius:14px!important;}
-div[data-testid="stFileUploader"] section{background:#FFFBEB!important; border:0px!important;}
-div[data-testid="stFileUploader"] button{background:#FDE047!important; color:#000000!important; border:1.5px solid #000000!important; font-weight:900!important;}
-</style>
-""", unsafe_allow_html=True)
-
-def generar_pdf_bytes(logo_emp, logo_mar, formato_sel):
-    buffer = io.BytesIO()
-    
-    # Evaluar formato de hoja
-    if "TÉRMICA" in formato_sel:
-        # 100mm x 150mm aproximado en puntos ReportLab (1 mm = 2.83465 pt)
-        pagesize = (283, 425) 
-        items_por_pagina = 1
-    elif "HORIZONTAL" in formato_sel:
-        pagesize = landscape(A4)
-        items_por_pagina = 2
-    else:
-        pagesize = A4
-        items_por_pagina = 4
-
-    w, h = pagesize
-    c = canvas.Canvas(buffer, pagesize=pagesize)
-    lh = h / items_por_pagina
-
-    for idx, row in enumerate(st.session_state.data):
-        pos = idx % items_por_pagina
-        y_top = h - (pos * lh)
-        
-        # Dibujar bordes de etiqueta
-        c.setStrokeColorRGB(0, 0, 0)
-        c.setLineWidth(2)
-        c.rect(15, y_top - lh + 15, w - 30, lh - 30)
-
-        # 1. Cabecera - Destino Principal y Bultos
-        c.setFont("Helvetica-Bold", 24 if "TÉRMICA" in formato_sel else 28)
-        ciudad_destino = row['DESTINO'].split('-')[-1].strip()
-        c.drawString(30, y_top - 45, f"DESTINO: {ciudad_destino}")
-        
-        c.setFont("Helvetica-Bold", 16)
-        c.drawRightString(w - 30, y_top - 45, f"BULTOS: {row['BULTOS']}")
-        
-        c.setLineWidth(1.5)
-        c.line(20, y_top - 60, w - 20, y_top - 60)
-
-                # =====================================================================
-        # 2. INFORMACIÓN DEL REMITENTE / CLIENTE (BLOQUE RESTAURADO)
-        # =====================================================================
-        c.setFont("Helvetica-Bold", 13)
-        c.drawString(30, y_top - 85, f"ATT 1: {row['ATT 1']}")
-        
-        c.setFont("Helvetica", 11)
-        c.drawString(30, y_top - 105, f"DNI/RUC: {row['DNI 1']}    |    DOC: {row['FACTURA']}")
-
-        # Datos Opcionales (ATT 2) y Celular
-        if row['ATT 2']:
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(30, y_top - 130, f"ATT 2: {row['ATT 2']}")
-            c.setFont("Helvetica", 11)
-            c.drawString(30, y_top - 150, f"DNI 2: {row['DNI 2']}    |    CEL: {row['CELULAR']}")
-            y_control_logos = y_top - 160  # Coordenada base para logos si hay ATT 2
-        else:
-            c.setFont("Helvetica", 11)
-            c.drawString(30, y_top - 130, f"CELULAR: {row['CELULAR'] if row['CELULAR'] else 'S/N'}")
-            y_control_logos = y_top - 140  # Coordenada base para logos si NO hay ATT 2
-
-        # --- GENERACIÓN AUTOMÁTICA DE CÓDIGO QR ---
-        try:
-            # Creamos un texto compacto para el QR con los datos esenciales del bulto
-            qr_text = f"DESTINO: {ciudad_destino}\nBULTO: {row['BULTOS']}\nATT: {row['ATT 1']}\nDOC: {row['FACTURA']}"
-            qr = qrcode.QRCode(version=1, box_size=2, border=1)
-            qr.add_data(qr_text)
-            qr.make(fit=True)
-            qr_img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Guardamos el QR generado en memoria para ReportLab
-            qr_buffer = io.BytesIO()
-            qr_img.save(qr_buffer, format="PNG")
-            qr_buffer.seek(0)
-            
-            # Dibujamos el QR en la parte inferior izquierda de la etiqueta
-            c.drawImage(ImageReader(qr_buffer), 30, y_top - lh + 25, width=55, height=55)
-        except Exception as e:
-            pass # Si falla la generación del QR, la etiqueta se sigue procesando normalmente
-
-        # --- RENDERIZADO SEGURO DE LOGOS (EMPRESA Y MARCAS) ---
-        # Logo de la Empresa (Arriba a la derecha del bloque inferior)
-        if logo_emp:
-            try:
-                img_emp = Image.open(logo_emp)
-                c.drawImage(ImageReader(img_emp), w - 130, y_top - 120, width=95, height=45, preserveAspectRatio=True, mask='auto')
-            except: 
-                pass
-
-        # Logo de Marcas (Abajo a la derecha del bloque inferior)
-        if logo_mar:
-            try:
-                img_mar = Image.open(logo_mar)
-                c.drawImage(ImageReader(img_mar), w - 130, y_top - lh + 25, width=95, height=40, preserveAspectRatio=True, mask='auto')
-            except: 
-                pass
-
-        # Control estructural de saltos de página nativos de ReportLab
-        if pos == items_por_pagina - 1 and idx < len(st.session_state.data) - 1:
-            c.showPage()
-        elif "TÉRMICA" in formato_sel and idx < len(st.session_state.data) - 1:
-            c.showPage()
-
-    c.save()
-    buffer.seek(0)
-    return buffer.getvalue()
-# =====================================================================
-# --- PANEL DE ACCIÓN: PROCESAMIENTO, IMPRESIÓN Y VISTA DE BULTOS ---
-# =====================================================================
-
-if st.session_state.print_now and st.session_state.data:
-    pdf_bytes = generar_pdf_bytes(logo_empresa, logo_marcas, formato)
-    if pdf_bytes:
-        st.success(f"✅ PDF Generado - {len(st.session_state.data)} etiquetas")
-        c1, c2 = st.columns(2)
-        
-        with c1: 
-            st.download_button(
-                "📥 Descargar PDF", 
-                data=pdf_bytes, 
-                file_name="etiquetas.pdf", 
-                mime="application/pdf", 
-                use_container_width=True, 
-                type="primary"
-            )
-            
-        with c2:
-            # Codificación limpia a Base64 para el script de auto-impresión
-            b64 = base64.b64encode(pdf_bytes).decode()
-            
-            # Botón nativo HTML + JS inyectado de forma segura en Streamlit
-            st.components.v1.html(f"""
-                <button onclick="var w=window.open(); w.document.write('<iframe src=\\'data:application/pdf;base64,{b64}\\' style=\\'width:100%;height:100%;border:none;\\'><\\/iframe>'); setTimeout(function(){{ w.focus(); w.print(); }}, 500);" 
-                        style="width:100%; height:46px; background:#4CB978; color:white; border:none; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; transition: 0.3s;">
-                    🖨️ Imprimir Ahora Directo
-                </button>
-            """, height=60)
-            
-    # Apagamos el flag de impresión de forma segura para el próximo clic
-    st.session_state.print_now = False
-
-# --- PREVISUALIZACIÓN DE LA TABLA DE BULTOS EN COLA ---
-st.markdown("<br>", unsafe_allow_html=True)
-if st.session_state.data:
-    st.markdown(f"""
-        <div style='background:white; border:2px solid #000000; padding:12px; border-radius:10px; margin-bottom:10px;'>
-            <b style='color:#000000; font-size:15px;'>📦 BULTOS EN COLA - {len(st.session_state.data)} etiquetas creadas | Modo: {formato}</b>
-        </div>
+else:
+    # =====================================================================
+    # --- TODO EL CONTENIDO DE LA APP PRINCIPAL DENTRO DEL ELSE ---
+    # =====================================================================
+    st.markdown("""
+    <style>
+    .stApp{background:#ffffff!important;}
+    section[data-testid="stSidebar"]{background:#ffffff!important;}
+    section[data-testid="stSidebar"] h3, section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] label p, section[data-testid="stSidebar"] span{color:#000000!important; font-weight:800!important; opacity:1!important;}
+    div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p{color:#000000!important; font-weight:900!important; font-size:13px!important;}
+    div[data-testid="stTextInput"] input{background:#ffffff!important; color:#000000!important; border:2px solid #000000!important; height:46px!important; font-weight:700!important;}
+    div[data-baseweb="select"] > div{background:#ffffff!important; border:2px solid #000000!important;}
+    div[data-baseweb="select"] span{color:#000000!important; font-weight:700!important;}
+    div[data-testid="stNumberInput"] input{background:#ffffff!important; color:#000000!important; border:2px solid #000000!important;}
+    div[data-testid="stFileUploader"]{background:#FFFBEB!important; border:2px dashed #FACC15!important; border-radius:14px!important;}
+    div[data-testid="stFileUploader"] section{background:#FFFBEB!important; border:0px!important;}
+    div[data-testid="stFileUploader"] button{background:#FDE047!important; color:#000000!important; border:1.5px solid #000000!important; font-weight:900!important;}
+    </style>
     """, unsafe_allow_html=True)
+
+    col_titulo, col_imp, col_limpiar, col_logout = st.columns([4.2, 1.4, 1.4, 1.4])
+    with col_titulo: 
+        st.markdown("<h1 style='margin:0; color:#111827;'>Etiquetas <span style='color:#ff7a5c'>PRO</span></h1>", unsafe_allow_html=True)
+
+    with col_imp:
+        if st.button("🖨️ Imprimir / Generar PDF", use_container_width=True, type="primary"):
+            if st.session_state.data: 
+                st.session_state.print_now = True
+            else: 
+                st.toast("⚠️ Agrega bultos a la lista primero")
+
+    with col_limpiar:
+        if st.button("🗑️ Limpiar Lista", use_container_width=True): 
+            st.session_state.data = []
+            st.session_state.print_now = False
+            st.rerun()
+
+    with col_logout:
+        if st.button("🚪 Cerrar sesión", use_container_width=True): 
+            st.session_state.logged = False
+            st.rerun()
+
+    with st.sidebar:
+        st.markdown("### ⚙️ Configuración")
+        st.markdown("<p style='font-size:11px; font-weight:800; margin:0;'>FORMATO</p>", unsafe_allow_html=True)
+        formato = st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","A4 HORIZONTAL - 2 POR HOJA","TÉRMICA 100X150"], label_visibility="collapsed")
+        st.markdown("<p style='font-size:11px; font-weight:800; margin:10px 0 2px 0;'>🔑 API DNI/RUC</p>", unsafe_allow_html=True)
+        st.text_input("TOKEN API", type="password", placeholder="Token opcional", key="api_token_input", label_visibility="collapsed")
+        st.markdown("<p style='font-size:11px; font-weight:800; margin:12px 0 2px 0;'>TU LOGO DE TU EMPRESA</p>", unsafe_allow_html=True)
+        logo_empresa = st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="logo_emp", label_visibility="collapsed")
+        st.markdown("<p style='font-size:11px; font-weight:800; margin:8px 0 2px 0;'>LOGO DE MARCAS ABAJO (Opcional)</p>", unsafe_allow_html=True)
+        logo_marcas = st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="logo_mar", label_visibility="collapsed")
+
+    PROVINCIAS_PERU = sorted(["PIURA - SULLANA","PIURA - PIURA","LIMA - LIMA","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA"])
+
+    st.markdown("<h3 style='color:#111827; margin-top:15px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns([1.1, 1.9, 1.1, 0.6])
+    with c1: st.text_input("DNI/RUC 1", key="w_dni", placeholder="75098930")
+    with c2: st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="w_nombre")
+    with c3: st.text_input("N° FACTURA / GUIA", key="w_factura", placeholder="F001-XXXXX")
+    with c4:
+        st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
+        st.button("🔍 Buscar", use_container_width=True, type="primary", on_click=buscar_click)
+
+    c5, c6, c7 = st.columns([2, 1.2, 1])
+    with c5: st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="w_nombre2")
+    with c6: st.text_input("DNI 2", key="w_dni2")
+    with c7: st.text_input("CELULAR", key="w_celular")
+
+    c8, c9, c10, c11 = st.columns([1.6, 0.6, 0.6, 0.7])
+    with c8: st.selectbox("DESTINO", PROVINCIAS_PERU, key="w_destino")
+    with c9: st.number_input("BULTO INICIO", min_value=1, step=1, key="w_bulto")
+    with c10: st.number_input("TOTAL", min_value=1, step=1, key="w_total")
+    with c11:
+        st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
+        st.button("➕ Agregar", use_container_width=True, type="primary", on_click=agregar_click)
+
+    # --- PANEL DE ACCIÓN: PROCESAMIENTO, IMPRESIÓN Y VISTA DE BULTOS ---
+    if st.session_state.print_now and st.session_state.data:
+        pdf_bytes = generar_pdf_bytes(logo_empresa, logo_marcas, formato)
+        if pdf_bytes:
+            st.success(f"✅ PDF Generado - {len(st.session_state.data)} etiquetas")
+            c1, c2 = st.columns(2)
+            with c1: 
+                st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name="etiquetas.pdf", mime="application/pdf", use_container_width=True, type="primary")
+            with c2:
+                b64 = base64.b64encode(pdf_bytes).decode()
+                st.components.v1.html(f"""
+                    <button onclick="var w=window.open(); w.document.write('<iframe src=\\'data:application/pdf;base64,{b64}\\' style=\\'width:100%;height:100%;border:none;\\'><\\/iframe>'); setTimeout(function(){{ w.focus(); w.print(); }}, 500);" 
+                            style="width:100%; height:46px; background:#4CB978; color:white; border:none; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer;">
+                        🖨️ Imprimir Ahora Directo
+                    </button>
+                """, height=60)
+        st.session_state.print_now = False
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.session_state.data:
+        st.markdown(f"""
+    # =====================================================================
+    # --- BLOQUE FINAL: PREVISUALIZACIÓN DE TABLA Y CIERRE DE LA APP ---
+    # =====================================================================
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # Renderizado del DataFrame ocultando el index para una visualización limpia
-    st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
-else: 
-    st.info("💡 Aún no hay bultos registrados. Completa los datos del cliente arriba y haz clic en '➕ Agregar'.")
+    if st.session_state.data:
+        st.markdown(f"""
+            <div style='background:white; border:2px solid #111827; padding:12px; border-radius:10px; margin-bottom:10px;'>
+                <b style='color:#111827; font-size:15px;'>📦 BULTOS - {len(st.session_state.data)} etiquetas | Modo: {formato}</b>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Muestra la tabla interactiva sin la columna de índices para ahorrar espacio
+        st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
+    else: 
+        st.info("💡 Aún no hay bultos - agrega clientes arriba")
 
-# Pie de página técnico siempre visible al fondo
-footer_soporte()
-
+    # Inyección del banner de contacto técnico al fondo de la pantalla principal
+    footer_soporte()
