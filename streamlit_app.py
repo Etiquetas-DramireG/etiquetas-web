@@ -1,4 +1,4 @@
-            import streamlit as st
+import streamlit as st
 from fpdf import FPDF
 import os, qrcode, requests, sys
 
