@@ -1,19 +1,18 @@
 import streamlit as st
 from fpdf import FPDF
-import os, qrcode, requests, sys
+import os, qrcode, requests
 
 st.set_page_config(page_title="DramirenG", layout="wide")
 if "login" not in st.session_state: st.session_state.login=False
 if "lista" not in st.session_state: st.session_state.lista=[]
 if "clientes" not in st.session_state: st.session_state.clientes={}
 
-# FIX ERROR ROJO
+# FIX ERROR ROJO - tiene que ir ANTES de los inputs
 if st.session_state.get("do_clear"):
     for k in ["dni","nombre","destino","factura","celular"]:
         st.session_state.pop(k, None)
     st.session_state["do_clear"]=False
 
-# Cargar BD local como tu.exe
 if os.path.exists("clientes_guardados.txt"):
     try:
         with open("clientes_guardados.txt","r",encoding="utf-8") as f:
@@ -27,26 +26,25 @@ PROVINCIAS = ["CHACHAPOYAS","BAGUA","BONGARA","HUARAZ","CASMA","HUARMEY","SANTA"
 def buscar_dni_api(dni, token):
     dni=dni.strip()
     if len(dni)==7 and dni.isdigit(): dni="0"+dni
-    # 1. Buscar en TXT local
     if dni in st.session_state.clientes:
         return st.session_state.clientes[dni][1]
-    # 2. Buscar en API
     if not token: return None
     try:
         if len(dni)==8:
-            r=requests.post("https://apiperu.dev", json={"dni":dni}, headers={"Authorization":f"Bearer {token}"}, timeout=6, verify=False)
+            # URL CORREGIDA
+            r=requests.post("https://apiperu.dev/api/dni", json={"dni":dni}, headers={"Authorization":f"Bearer {token}"}, timeout=6, verify=False)
             if r.status_code==200 and r.json().get("success"):
                 d=r.json()["data"]
                 return f"{d.get('nombres','')} {d.get('apellido_paterno','')} {d.get('apellido_materno','')}".strip().upper()
         else:
-            r=requests.post("https://apiperu.dev", json={"ruc":dni}, headers={"Authorization":f"Bearer {token}"}, timeout=6, verify=False)
+            r=requests.post("https://apiperu.dev/api/ruc", json={"ruc":dni}, headers={"Authorization":f"Bearer {token}"}, timeout=6, verify=False)
             if r.status_code==200 and r.json().get("success"):
                 return r.json()["data"].get("nombre_o_razon_social","").upper()
     except: pass
-    # 3. Fallback apis.net.pe
     try:
+        # URL CORREGIDA
         t="dni" if len(dni)==8 else "ruc"
-        r=requests.get(f"https://apis.net.pe{t}?numero={dni}", headers={"Authorization":f"Bearer {token}"} if token else {}, timeout=5).json()
+        r=requests.get(f"https://api.apis.net.pe/v1/{t}?numero={dni}", headers={"Authorization":f"Bearer {token}"}, timeout=5).json()
         return (r.get('nombre') or r.get('razonSocial') or "").upper()
     except: return None
 
@@ -59,30 +57,25 @@ if not st.session_state.login:
         else: st.error("Error")
     st.stop()
 
-# SIDEBAR - CONFIGURACIÓN e IMÁGENES
 st.sidebar.title("⚙️ Configuración")
-api_token = st.sidebar.text_input("Token API Perú", type="password", help="Pega tu token de apiperu.dev")
+api_token = st.sidebar.text_input("Token API Perú", type="password")
 st.sidebar.divider()
 st.sidebar.subheader("🖨️ Formato")
 formato = st.sidebar.radio("Impresión:", ["A4 Vertical - 4 por hoja (una sobre otra)", "A4 Horizontal - toda la hoja", "Térmica 100x150"])
-
 st.sidebar.divider()
 st.sidebar.subheader("🖼️ Logos - DONDE VAN")
 up_logo1 = st.sidebar.file_uploader("Logo DG (arriba derecha)", type=["png","jpg","jpeg"])
 if up_logo1:
-    with open("logo_dg.png","wb") as f: f.write(up_logo1.getbuffer())
-    with open("logo_imagen1.png","wb") as f: f.write(up_logo1.getbuffer())
+    open("logo_dg.png","wb").write(up_logo1.getbuffer())
+    open("logo_imagen1.png","wb").write(up_logo1.getbuffer())
     st.sidebar.success("✅ Logo DG guardado")
-
 up_logo2 = st.sidebar.file_uploader("Marcas Nike Puma Adidas (abajo)", type=["png","jpg","jpeg"])
 if up_logo2:
-    with open("marcas.png","wb") as f: f.write(up_logo2.getbuffer())
-    with open("logo_imagen2.png","wb") as f: f.write(up_logo2.getbuffer())
+    open("marcas.png","wb").write(up_logo2.getbuffer())
+    open("logo_imagen2.png","wb").write(up_logo2.getbuffer())
     st.sidebar.success("✅ Marcas guardadas")
-
 if os.path.exists("logo_imagen1.png"): st.sidebar.image("logo_imagen1.png", width=100)
 if os.path.exists("logo_imagen2.png"): st.sidebar.image("logo_imagen2.png", width=150)
-
 if st.sidebar.button("Cerrar sesión"): st.session_state.login=False; st.rerun()
 
 st.title("🏷️ DramirenG - Despacho")
@@ -97,14 +90,11 @@ with c1:
                 cli=st.session_state.clientes[dni]
                 if len(cli)>=3 and cli[2]: st.session_state["celular"]=cli[2]
                 if len(cli)>=4 and cli[3]: st.session_state["destino"]=cli[3]
-            st.success(f"Encontrado: {nom}")
-            st.rerun()
-        else:
-            st.warning("No encontrado, escribe manual o revisa token")
-
+            st.success(f"Encontrado: {nom}"); st.rerun()
+        else: st.warning("No encontrado, escribe manual o revisa token")
 with c2: nombre=st.text_input("Nombre", key="nombre", placeholder="")
 with c3:
-    destino_input = st.text_input("DESTINO", key="destino", placeholder="Ej: AREQ")
+    destino_input = st.text_input("DESTINO", key="destino", placeholder="Ej: SULLANA")
     if destino_input:
         ms = [p for p in PROVINCIAS if destino_input.upper() in p][:5]
         if ms and destino_input.upper() not in PROVINCIAS:
@@ -112,7 +102,6 @@ with c3:
             if st.button("✅ Usar destino"):
                 st.session_state["destino"]=sel; st.rerun()
     destino = st.session_state.get("destino","").upper()
-
 with c4:
     fact_raw=st.text_input("FACTURA/GUIA", key="factura", placeholder="F001-123")
     factura=fact_raw.upper()
@@ -131,88 +120,78 @@ with c8:
             st.session_state["do_clear"]=True; st.rerun()
 
 def dibujar(x,y,d,w,h,pdf):
-    # MÁS MARGEN EXTERNO
+    # CON MÁS MARGEN COMO MARCASTE EN ROSADO
     pdf.set_draw_color(0,0,0)
     pdf.set_line_width(0.7 if h<100 else 1.2)
     pdf.rect(x,y,w,h)
 
-    # 1. HEADER CON MÁS AIRE
     pdf.set_font("Helvetica","B", 26 if h<100 else 48)
-    pdf.set_xy(x+5, y+3)
-    pdf.cell(100, 12 if h<100 else 22, d['destino'], align='L')
+    pdf.set_xy(x+6, y+4) # +6 margen izquierdo
+    pdf.cell(95, 12 if h<100 else 22, d['destino'], align='L')
 
-    # (1/4) - lo alejamos del logo DG
-    pdf.set_font("Helvetica","B", 16 if h<100 else 28)
-    pdf.set_xy(x+108, y+4)
-    pdf.cell(30, 10 if h<100 else 20, f"({d['b1']}/{d['b2']})", align='C')
+    # (1/4) separado del DG
+    pdf.set_font("Helvetica","B", 15 if h<100 else 26)
+    pdf.set_xy(x+105, y+5) # antes 108, ahora 105 más a la izq
+    pdf.cell(32, 10 if h<100 else 20, f"({d['b1']}/{d['b2']})", align='C')
 
-    # LOGO DG
     l1="logo_dg.png" if os.path.exists("logo_dg.png") else "logo_imagen1.png" if os.path.exists("logo_imagen1.png") else None
     if l1:
-        pdf.image(l1, x+w-34, y+2.5, 28, 12 if h<100 else 28)
+        # Logo con más margen derecho
+        pdf.image(l1, x+w-32, y+3, 26, 11 if h<100 else 26)
 
-    pdf.line(x, y+18, x+w, y+18)
+    pdf.line(x, y+19, x+w, y+19)
 
-    # 2. DATOS CON MÁS MARGEN IZQUIERDO
     pdf.set_font("Arial","B",10 if h<100 else 18)
-    pdf.set_xy(x+5, y+20)
-    pdf.cell(w-10,5,f"ATT: {d['nombre'].upper()}")
-    
-    pdf.set_xy(x+5, y+26)
-    pdf.set_font("Arial","",8 if h<100 else 13)
-    pdf.cell(w-10,4,f"DNI/RUC: {d['dni']} | FACTURA: {d['factura'].upper()}")
-    
-    pdf.set_xy(x+5, y+32)
-    pdf.set_font("Arial","B",9 if h<100 else 15)
-    pdf.cell(w-10,4,f"CELULAR: {d['celular']}")
+    pdf.set_xy(x+6, y+21)
+    pdf.cell(w-12,5,f"ATT: {d['nombre'].upper()}")
 
-    # 3. FOOTER - MARCAS Y QR CON MÁS MARGEN
+    pdf.set_xy(x+6, y+27)
+    pdf.set_font("Arial","",8 if h<100 else 13)
+    pdf.cell(w-12,4,f"DNI/RUC: {d['dni']} | FACTURA: {d['factura'].upper()}")
+
+    pdf.set_xy(x+6, y+33)
+    pdf.set_font("Arial","B",9 if h<100 else 15)
+    pdf.cell(w-12,4,f"CELULAR: {d['celular']}")
+
     l2="marcas.png" if os.path.exists("marcas.png") else "logo_imagen2.png" if os.path.exists("logo_imagen2.png") else None
     if l2:
-        pdf.image(l2, x+6, y+h-16, 115, 10 if h<100 else 20)
+        pdf.image(l2, x+7, y+h-15, 110, 9 if h<100 else 18)
 
-    # QR
     qr=qrcode.make(f"{d['nombre']}|{d['destino']}|{d['dni']}"); qr.save("qr.png")
-    pdf.image("qr.png", x+w-24, y+h-20, 16, 16 if h<100 else 32)
+    # QR con margen derecho e inferior
+    pdf.image("qr.png", x+w-22, y+h-18, 14, 14 if h<100 else 30)
 
-# SECCIÓN DE PROCESAMIENTO DE LA LISTA
 if st.session_state.lista:
     st.dataframe(st.session_state.lista, use_container_width=True)
-    
-    col_acciones = st.columns([1, 1])
-    with col_acciones[0]:
-        if st.button("🖨️ Generar PDF", type="secondary", use_container_width=True):
-            pass # Mantenemos el botón estructural si quieres procesar algo antes
-            
-        # Lógica para armar el PDF según formato seleccionado
-        if "Térmica" in formato:
-            pdf=FPDF(orientation='P', unit='mm', format=(100,150))
-            pdf.set_auto_page_break(auto=False)
-            for d in st.session_state.lista: 
-                pdf.add_page()
-                dibujar(3,3,d,94,144,pdf)
-        elif "Horizontal" in formato:
-            pdf=FPDF(orientation='L', format='A4')
-            for d in st.session_state.lista: 
-                pdf.add_page()
-                dibujar(5,5,d,287,200,pdf)
-        else:
-            pdf=FPDF(orientation='P', format='A4')
-            pdf.set_auto_page_break(auto=False)
-            pos_y=[12, 80, 148, 216] 
-            for i, d in enumerate(st.session_state.lista):
-                if i%4==0: pdf.add_page()
-                dibujar(10,pos_y[i%4],d,190,60,pdf)
 
-        # Botón de Descarga real
-        pdf_bytes = pdf.output(dest='S').encode('latin-1') if isinstance(pdf.output(dest='S'), str) else pdf.output(dest='S')
-        st.download_button("⬇️ DESCARGAR PDF", data=pdf_bytes, file_name="etiquetas_DramirenG.pdf", mime="application/pdf", use_container_width=True)
+    # GENERAR PDF SEGÚN FORMATO
+    if "Térmica" in formato:
+        pdf=FPDF(orientation='P', unit='mm', format=(100,150))
+        pdf.set_auto_page_break(auto=False)
+        for d in st.session_state.lista:
+            pdf.add_page()
+            dibujar(3,3,d,94,144,pdf)
+    elif "Horizontal" in formato:
+        pdf=FPDF(orientation='L', format='A4')
+        for d in st.session_state.lista:
+            pdf.add_page()
+            dibujar(5,5,d,287,200,pdf)
+    else:
+        pdf=FPDF(orientation='P', format='A4')
+        pdf.set_auto_page_break(auto=False)
+        pos_y=[12, 80, 148, 216] # más separación entre etiquetas
+        for i, d in enumerate(st.session_state.lista):
+            if i%4==0: pdf.add_page()
+            dibujar(10,pos_y[i%4],d,190,60,pdf)
+
+    pdf_bytes = bytes(pdf.output())
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button("⬇️ DESCARGAR PDF", data=pdf_bytes, file_name="etiquetas_DramirenG.pdf", mime="application/pdf", use_container_width=True, type="primary")
         st.balloons()
-        
-    with col_acciones[1]:
-        if st.button("🗑️ Limpiar lista", use_container_width=True): 
-            st.session_state.lista=[]
-            st.rerun()
+    with col2:
+        if st.button("🗑️ Limpiar lista", use_container_width=True):
+            st.session_state.lista=[]; st.rerun()
 else:
-    st.info("Vacío. Sube los 2 logos en la barra izquierda y pega tu Token API para buscar clientes.")
+    st.info("Vacío. Sube los 2 logos y pega tu Token API para buscar clientes.")
                                                                                                                                                                       
