@@ -299,28 +299,25 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
 
 def buscar_dni_ruc(doc, token):
     doc = doc.strip()
-    if not doc: return None
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    urls = []
-    if len(doc) == 8:
-        if token: urls.append((f"https://apis.net.pe{doc}", "apis_net"))
-        urls.append((f"https://apisperu.com{doc}", "apisperu"))
-    elif len(doc) == 11:
-        if token: urls.append((f"https://apis.net.pe{doc}", "apis_net"))
-        urls.append((f"https://apisperu.com{doc}", "apisperu"))
-
-    for url, proveedor in urls:
-        try:
-            r = requests.get(url, headers=headers, timeout=5)
+    token = (token or "").strip()
+    if not doc or not token: return None
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        if len(doc) == 8:
+            url = f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}"
+            r = requests.get(url, headers=headers, timeout=6)
             if r.status_code == 200:
                 d = r.json()
-                if proveedor == "apis_net":
-                    if "nombres" in d:
-                        return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
-                    if "razonSocial" in d: return d["razonSocial"]
-                if d.get("nombre"): return d["nombre"]
-                if d.get("razonSocial"): return d["razonSocial"]
-        except: continue
+                return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+        elif len(doc) == 11:
+            url = f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}"
+            r = requests.get(url, headers=headers, timeout=6)
+            if r.status_code == 200:
+                d = r.json()
+                return d.get('razonSocial') or d.get('nombre') or d.get('nombreComercial')
+    except:
+        pass
     return None
 
 def buscar_click():
