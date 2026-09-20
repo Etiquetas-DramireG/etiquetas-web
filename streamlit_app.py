@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from PIL import Image
 
-st.set_page_config(page_title="Etiquetas PRO", layout="wide", page_icon="🏷️")
+st.set_page_config(page_title="Bienvenido", layout="wide", page_icon="🏷️")
 if 'logged' not in st.session_state: st.session_state.logged = False
 if 'data' not in st.session_state: st.session_state.data = []
 if 'print_now' not in st.session_state: st.session_state.print_now = False
@@ -21,7 +21,7 @@ if not st.session_state.logged:
     c1,c2,c3 = st.columns([1,1.2,1])
     with c2:
         st.markdown("<br><br><h1 style='text-align:center; color:#111827;'>Etiquetas <span style='color:#ff7a5c;'>PRO</span></h1>", unsafe_allow_html=True)
-        u = st.text_input("USUARIO", value="admin"); p = st.text_input("CLAVE", type="password", value="dramireng123")
+        u = st.text_input("USUARIO", value=""); p = st.text_input("CLAVE", type="password", value="")
         if st.button("🔐 Entrar", use_container_width=True, type="primary"):
             if u=="admin" and p=="dramireng123": st.session_state.logged=True; st.rerun()
     footer_soporte(); st.stop()
