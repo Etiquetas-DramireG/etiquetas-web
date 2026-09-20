@@ -65,35 +65,54 @@ def footer_soporte():
     <p style="margin:0; color:#99ccff; font-size:11px; font-weight:bold;">Soporte Técnico Soporte.DramirenG:</p>
     <p style="margin:0; color:white; font-size:11px;">📞 959237626 | ✉️ Soporte.DramirenG@hotmail.com</p></div><div style="height:70px;"></div>""", unsafe_allow_html=True)
 
-# LOGIN COMO TU FOTO
 if not st.session_state.logged:
-    st.markdown("""
-    <style>
-   .stApp{background:#eef1f5!important;}
-   .login-card{background:white; border-radius:14px; box-shadow:0px 8px 30px rgba(0,0,0,0.18); border:1px solid #e5e7eb; overflow:hidden;}
-   .login-header{padding:16px 20px; font-weight:700; font-size:19px; color:#111827; border-bottom:1px solid #e5e7eb; background:white;}
-   .login-body{padding:18px 20px 14px 20px; background:white;}
-    div[data-testid="stTextInput"] label p{color:#111827!important; font-weight:600!important; font-size:13px!important;}
-    div[data-testid="stTextInput"] input{background:white!important; color:#111827!important; border:1.5px solid #d1d5db!important; border-radius:8px!important; height:42px!important;}
-    div[data-testid="stButton"] button[kind="primary"]{background:#5DB87F!important; color:white!important; border:0px!important; border-radius:8px!important; height:42px!important; font-weight:700!important;}
-    </style>
-    """, unsafe_allow_html=True)
-    c1,c2,c3 = st.columns([1,1.05,1])
+    # Si ya entro por el login HTML
+    if st.query_params.get("auth") == "ok":
+        st.session_state.logged = True
+        st.rerun()
+
+    st.markdown("<style>.stApp{background:#eef1f5!important;} #MainMenu, footer, header{visibility:hidden;}</style>", unsafe_allow_html=True)
+
+    c1,c2,c3 = st.columns([1,0.95,1])
     with c2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown('<div class="login-card"><div class="login-header">Iniciar Sesión</div><div class="login-body">', unsafe_allow_html=True)
-        st.text_input("Usuario", placeholder="Ingrese su usuario", key="login_user")
-        st.text_input("Contraseña", type="password", placeholder="Ingrese su contraseña", key="login_pass")
-        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-        aceptar = st.button("→ Aceptar", use_container_width=True, type="primary")
-        col1,col2 = st.columns([2.2,1])
-        with col2: cancelar = st.button("Cancelar", use_container_width=True)
-        st.markdown('</div></div>', unsafe_allow_html=True)
-        if aceptar:
-            if st.session_state.login_user=="admin" and st.session_state.login_pass=="dramireng123": st.session_state.logged=True; st.rerun()
-            else: st.error("Usuario o contraseña incorrecta")
-        if cancelar: st.session_state.login_user=""; st.session_state.login_pass=""; st.rerun()
-    footer_soporte(); st.stop()
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.components.v1.html("""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; background:white; border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,0.18); border:1px solid #e5e7eb; overflow:hidden; width:100%;">
+          <div style="padding:18px 22px; font-weight:700; font-size:20px; color:#111827; border-bottom:1px solid #e5e7eb;">Iniciar Sesión</div>
+          <div style="padding:20px 22px 16px 22px;">
+            <label style="font-size:13px; font-weight:600; color:#111827;">Usuario</label>
+            <div style="display:flex; align-items:center; border:1.5px solid #93c5fd; border-radius:8px; margin-top:6px; overflow:hidden; background:white;">
+              <div style="background:#e5e7eb; padding:10px 12px; border-right:1px solid #d1d5db;">👤</div>
+              <input id="u" placeholder="Ingrese su usuario" style="border:0; flex:1; padding:10px; outline:none; font-size:14px;">
+            </div>
+            <label style="font-size:13px; font-weight:600; color:#111827; margin-top:14px; display:block;">Contraseña</label>
+            <div style="display:flex; align-items:center; border:1.5px solid #d1d5db; border-radius:8px; margin-top:6px; overflow:hidden; background:white;">
+              <div style="background:#e5e7eb; padding:10px 12px; border-right:1px solid #d1d5db;">🔒</div>
+              <input id="p" type="password" placeholder="Ingrese su contraseña" style="border:0; flex:1; padding:10px; outline:none; font-size:14px;">
+              <div onclick="var i=document.getElementById('p'); i.type=i.type=='password'?'text':'password'" style="padding:0 12px; cursor:pointer; color:#6b7280;">👁️‍🗨️</div>
+            </div>
+            <button onclick="login()" style="width:100%; margin-top:18px; background:#5DB87F; color:white; border:0; border-radius:8px; height:42px; font-weight:700; font-size:15px; cursor:pointer;">→ Aceptar</button>
+            <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+              <button onclick="document.getElementById('u').value=''; document.getElementById('p').value=''" style="background:white; border:1.5px solid #d1d5db; border-radius:8px; padding:6px 18px; font-size:13px; cursor:pointer;">Cancelar</button>
+            </div>
+            <p id="err" style="color:red; font-size:12px; margin-top:8px; display:none;">Usuario o contraseña incorrecta</p>
+          </div>
+        </div>
+        <script>
+        function login(){
+          var u=document.getElementById('u').value;
+          var p=document.getElementById('p').value;
+          if(u==='admin' && p==='dramireng123'){
+            window.top.location.href = window.top.location.href.split('?')[0] + '?auth=ok';
+          }else{
+            document.getElementById('err').style.display='block';
+          }
+        }
+        </script>
+        """, height=350)
+
+    footer_soporte()
+    st.stop()
 
 # APP PRINCIPAL
 st.markdown("""
