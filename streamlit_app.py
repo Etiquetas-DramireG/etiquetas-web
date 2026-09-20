@@ -2,7 +2,7 @@ import streamlit as st
 from fpdf import FPDF
 import os, qrcode, requests
 
-st.set_page_config(page_title="DramirenG", layout="wide")
+st.set_page_config(page_title="DramirenG", layout="centered")
 if "login" not in st.session_state: st.session_state.login=False
 if "lista" not in st.session_state: st.session_state.lista=[]
 if "clientes" not in st.session_state: st.session_state.clientes={}
@@ -45,34 +45,76 @@ def buscar_dni_api(dni, token):
         return (r.get('nombre') or r.get('razonSocial') or "").upper()
     except: return None
 
+import datetime
+
 if not st.session_state.login:
-    # ESTO LO ACHICA Y CENTRA
+    # CSS PARA QUE SE VEA COMO TU TKINTER
     st.markdown("""
         <style>
-        .block-container {
-            max-width: 450px !important;
-            padding-top: 80px !important;
-            margin: auto !important;
+        .stApp { background-color: #001a33; }
+        .login-card {
+            background-color: #003366;
+            padding: 25px 30px 0px 30px;
+            border-radius: 8px;
+            border: 2px solid #002244;
+            text-align: center;
+            max-width: 400px;
+            margin: 40px auto 0 auto;
         }
-        input {
-            border-radius: 10px !important;
+        .soporte-box {
+            background-color: #002244;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            margin-left: -30px;
+            margin-right: -30px;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    c1,c2,c3 = st.columns([1, 2.5, 1])
+    ano_actual = datetime.datetime.now().strftime("%Y")
+
+    # CONTENEDOR CENTRADO
+    c1,c2,c3 = st.columns([1,1.2,1])
     with c2:
-        st.markdown("<h1 style='text-align:center'>🔐 DramirenG</h1>", unsafe_allow_html=True)
-        st.write("")
-        u=st.text_input("Usuario", placeholder="admin")
-        p=st.text_input("Clave", type="password", placeholder="••••••••")
-        st.write("")
-        if st.button("Ingresar", use_container_width=True, type="primary"):
-            if u=="admin" and p=="dramiren2026":
-                st.session_state.login=True
-                st.rerun()
-            else: 
-                st.error("Usuario o clave incorrecta")
+        st.markdown(f"""
+        <div class="login-card">
+            <p style="color:white; font-weight:bold; font-family:Arial; font-size:16px; margin-bottom:2px;">¡BIENVENIDO!</p>
+            <p style="color:#b3d9ff; font-style:italic; font-family:Arial; font-size:12px; margin-top:0px;">Control de Despachos Oficial {ano_actual}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.container(border=False):
+            # inputs estilo Tkinter
+            u = st.text_input("Nombre de Usuario:", key="user_login", placeholder="", label_visibility="visible")
+            p = st.text_input("Contraseña de Seguridad:", type="password", key="pass_login", label_visibility="visible")
+            
+            # Estilo para labels blancos
+            st.markdown("""
+                <style>
+                label { color: white !important; font-weight: bold !important; font-family: Arial !important; font-size: 13px !important; }
+                div[data-testid="stTextInput"] input { text-align: center; }
+                </style>
+            """, unsafe_allow_html=True)
+
+            btn = st.button("🔓 INGRESAR AL SISTEMA", use_container_width=True, type="primary")
+
+            if btn:
+                if u == "admin" and p == "dramiren2026":
+                    st.session_state.login = True
+                    st.rerun()
+                else:
+                    st.error("Acceso Denegado: El usuario o la contraseña son incorrectos.")
+
+        # SOPORTE ABAJO COMO TU TKINTER
+        st.markdown("""
+        <div style="background-color:#002244; padding:10px; border-radius:6px; text-align:center; border:1px solid #001a33; margin-top:15px;">
+            <p style="color:#99ccff; font-weight:bold; font-size:11px; font-family:Arial; margin:0px;">Soporte Técnico de Control Soporte.DramirenG:</p>
+            <p style="color:white; font-size:11px; font-family:Arial; margin:2px;">📞 Celular: 959237626</p>
+            <p style="color:white; font-size:11px; font-family:Arial; margin:2px;">✉️ Correo: Soporte.DramirenG@hotmail.com</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.stop()
 
 st.sidebar.title("⚙️ Configuración")
