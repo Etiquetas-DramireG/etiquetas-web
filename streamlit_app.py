@@ -92,43 +92,60 @@ def footer_soporte():
 if not st.session_state.logged:
     st.markdown("""
     <style>
-    .stApp{background:#f0f2f6!important;}
-    div[data-testid="stTextInput"] input{
-        background:white!important; color:#000000!important; 
-        border:1.5px solid #000000!important; border-radius:10px!important; height:46px!important;
+    .stApp{background:#eef1f5!important;}
+    /* CARD */
+    .login-card{
+        background:white; border-radius:14px; 
+        box-shadow:0px 8px 30px rgba(0,0,0,0.18);
+        border:1px solid #e5e7eb; overflow:hidden;
     }
-    div[data-testid="stTextInput"] label p{color:#000000!important; font-weight:800!important; font-size:12px!important;}
+    .login-header{
+        padding:16px 20px; font-weight:700; font-size:19px; color:#111827;
+        border-bottom:1px solid #e5e7eb; background:white;
+    }
+    .login-body{padding:18px 20px 14px 20px; background:white;}
+    div[data-testid="stTextInput"] label p{color:#111827!important; font-weight:600!important; font-size:13px!important;}
+    div[data-testid="stTextInput"] input{
+        background:white!important; color:#111827!important;
+        border:1.5px solid #d1d5db!important; border-radius:0px 8px 8px 0px!important;
+        height:42px!important;
+    }
+    /* BOTON VERDE ACEPTAR */
+    div[data-testid="stButton"] button[kind="primary"]{
+        background:#4CAF7A!important; color:white!important; border:0px!important;
+        border-radius:8px!important; height:42px!important; font-weight:700!important;
+    }
     </style>
     """, unsafe_allow_html=True)
-    
-    # CENTRADO CON MARCO
-    c1,c2,c3=st.columns([1,1.1,1])
+
+    c1,c2,c3 = st.columns([1,1.05,1])
     with c2:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("""
-        <div style="
-            background:white; 
-            border:2px solid #000000; 
-            border-radius:20px; 
-            padding:35px 30px 25px 30px; 
-            box-shadow: 0px 10px 30px rgba(0,0,0,0.15);
-        ">
-            <h1 style='text-align:center; color:#111827; margin:0 0 25px 0; font-weight:900;'>Bienvenido</h1>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="login-card"><div class="login-header">Iniciar Sesión</div><div class="login-body">', unsafe_allow_html=True)
         
-        u=st.text_input("USUARIO", placeholder="Ingresa tu usuario")
-        p=st.text_input("CLAVE", type="password", placeholder="Ingresa tu clave")
+        u = st.text_input("Usuario", placeholder="Ingrese su usuario", key="login_user")
+        p = st.text_input("Contraseña", type="password", placeholder="Ingrese su contraseña", key="login_pass")
         
-        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
-        login = st.button("Iniciar sesión", use_container_width=True, type="primary")
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        aceptar = st.button("→ Aceptar", use_container_width=True, type="primary")
         
-        st.markdown("</div>", unsafe_allow_html=True)
+        # BOTON CANCELAR CHICO A LA DERECHA
+        col_c1, col_c2 = st.columns([2.2,1])
+        with col_c2:
+            cancelar = st.button("Cancelar", use_container_width=True)
         
-        if login:
-            if u=="admin" and p=="dramireng123": 
-                st.session_state.logged=True; st.rerun()
-            else: 
-                st.error("Usuario o clave incorrecta")
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        if aceptar:
+            if u=="admin" and p=="dramireng123":
+                st.session_state.logged=True
+                st.rerun()
+            else:
+                st.error("Usuario o contraseña incorrecta")
+        if cancelar:
+            st.session_state.login_user=""
+            st.session_state.login_pass=""
+            st.rerun()
 
     footer_soporte()
     st.stop()
