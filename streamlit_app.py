@@ -328,26 +328,29 @@ def buscar_dni_ruc(doc, token):
     return None
 
 def buscar_click():
-    token = st.session_state.get("api_token_input", "").strip()
-    # SI TU TOKEN ESTA EN OTRO NOMBRE CAMBIA ESTA LINEA:
-    if not token:
-        token = st.session_state.get("api_token", "").strip()
+    token = st.session_state.get("api_token_input","").strip() or st.session_state.get("api_token","").strip()
+    doc1 = st.session_state.get("w_dni","").strip()
+    doc2 = st.session_state.get("w_dni2","").strip()
     
-    doc1 = st.session_state.get("w_dni", "").strip()
-
-    if not doc1:
-        st.toast("⚠️ Escribe DNI 1")
+    if not doc1 and not doc2:
+        st.toast("⚠️ Escribe DNI 1 o DNI 2")
         return
 
-    st.toast(f"Buscando {doc1}...")
-    res1 = buscar_dni_ruc(doc1, token)
-    
-    if res1: 
-        st.session_state.w_nombre = res1
-        st.session_state["w_nombre"] = res1
-        st.toast(f"✅ Encontrado: {res1}")
-    else: 
-        st.toast(f"❌ No se encontró: {doc1} - Revisa tu TOKEN")
+    if doc1:
+        res1 = buscar_dni_ruc(doc1, token)
+        if res1:
+            st.session_state.w_nombre = res1
+            st.toast(f"✅ DNI 1: {res1}")
+        else:
+            st.toast(f"❌ No encontró DNI 1: {doc1}")
+
+    if doc2:
+        res2 = buscar_dni_ruc(doc2, token)
+        if res2:
+            st.session_state.w_nombre2 = res2
+            st.toast(f"✅ DNI 2: {res2}")
+        else:
+            st.toast(f"❌ No encontró DNI 2: {doc2}")
             
 def agregar_click():
     if not st.session_state.w_nombre: 
