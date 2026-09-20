@@ -20,10 +20,14 @@ if not st.session_state.logged:
     st.markdown("<style>.stApp{background:#f2f3f7 !important;} div[data-testid='stTextInput'] input{background:white !important; color:#111827 !important; border:2px solid #111827 !important; border-radius:12px !important; height:50px !important;} div[data-testid='stTextInput'] label p{color:#111827 !important; font-weight:800 !important;}</style>", unsafe_allow_html=True)
     c1,c2,c3 = st.columns([1,1.2,1])
     with c2:
-        st.markdown("<br><br><h1 style='text-align:center; color:#111827;'>Bienvenido <span style='color:#ff7a5c;'></span></h1>", unsafe_allow_html=True)
-        u = st.text_input("USUARIO", value="admin"); p = st.text_input("CLAVE", type="password", value="dramireng123")
+        st.markdown("<br><br><h1 style='text-align:center; color:#111827;'>Bienvenido</h1>", unsafe_allow_html=True)
+        u = st.text_input("USUARIO", placeholder="Ingresa tu usuario")
+        p = st.text_input("CLAVE", type="password", placeholder="Ingresa tu clave")
         if st.button("🔐 Entrar", use_container_width=True, type="primary"):
-            if u=="admin" and p=="dramireng123": st.session_state.logged=True; st.rerun()
+            if u=="admin" and p=="dramireng123": 
+                st.session_state.logged=True; st.rerun()
+            else:
+                st.error("Usuario o clave incorrecta")
     footer_soporte(); st.stop()
 
 st.markdown("""
@@ -63,7 +67,7 @@ with st.sidebar:
     logo_empresa = st.file_uploader("TU LOGO DE TU EMPRESA", type=["png","jpg","jpeg"], key="dg", label_visibility="collapsed")
     st.markdown("**LOGO DE MARCAS ABAJO (Opcional)**")
     logo_marcas = st.file_uploader("Marcas abajo", type=["png","jpg","jpeg"], key="marcas", label_visibility="collapsed")
-    st.markdown("<p style='font-size:10px; color:#6b7280;'>El cliente sube aquí su logo. Nada de DramirenG.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:10px; color:#6b7280;'>El cliente sube aquí su logo.</p>", unsafe_allow_html=True)
 
 # TODAS LAS PROVINCIAS DEL PERU CON AUTOCOMPLETAR
 PROVINCIAS_PERU = sorted([
