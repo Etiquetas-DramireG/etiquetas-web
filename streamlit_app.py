@@ -102,42 +102,40 @@ if not st.session_state.logged:
 
 st.markdown("""
 <style>
-.stApp{background:#f8f9fb!important;}
+/* FONDO GENERAL */
+.stApp{background:#ffffff!important;}
 section[data-testid="stSidebar"]{background:#ffffff!important;}
-section[data-testid="stSidebar"] *{color:#111827!important;}
 
-/* LABELS NEGROS BIEN VISIBLES */
+/* LABELS NEGROS VISIBLES */
 div[data-testid="stTextInput"] label p, 
 div[data-testid="stSelectbox"] label p, 
 div[data-testid="stNumberInput"] label p {
-    color:#000000!important; font-weight:900!important; font-size:13px!important; opacity:1!important;
+    color:#000000!important; font-weight:900!important; font-size:13px!important;
 }
-h3{color:#000000!important;}
+h3, h1{color:#000000!important;}
 
-/* CAJAS BLANCAS CON BORDE NEGRO Y LETRA NEGRA */
+/* CAJAS BLANCAS */
 div[data-testid="stTextInput"] input{
-    background:white!important; color:#000000!important; 
-    border:2px solid #000000!important; border-radius:10px!important; 
-    height:46px!important; font-weight:700!important;
+    background:#ffffff!important; color:#000000!important; 
+    border:2px solid #000000!important; height:46px!important; font-weight:700!important;
 }
-div[data-baseweb="select"] > div{
-    background:white!important; border:2px solid #000000!important; color:#000000!important;
-}
-div[data-baseweb="select"] span{color:#000000!important; font-weight:700!important; background:white!important;}
-div[data-baseweb="select"] div{background:white!important;}
-div[data-testid="stNumberInput"] input{
-    background:white!important; color:#000000!important; border:2px solid #000000!important; font-weight:700!important;
-}
-div[data-testid="stNumberInput"] button{background:#000000!important;}
-div[data-testid="stNumberInput"] button svg{fill:white!important;}
+div[data-baseweb="select"] > div{background:#ffffff!important; border:2px solid #000000!important;}
+div[data-baseweb="select"] span{color:#000000!important; font-weight:700!important;}
+div[data-testid="stNumberInput"] input{background:#ffffff!important; color:#000000!important; border:2px solid #000000!important;}
 
-/* UPLOAD */
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{
-    background:#fefce8!important; border:2px solid #000000!important; border-radius:12px!important;
+/* UPLOAD AMARILLO Y BLANCO - FIX DEL NEGRO */
+div[data-testid="stFileUploader"]{
+    background:#fefce8!important; border:2px solid #facc15!important; border-radius:12px!important;
 }
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{
-    background:#fde047!important; color:#000000!important; border:1px solid black!important; font-weight:800!important;
+div[data-testid="stFileUploader"] section{
+    background:#fefce8!important; border:2px dashed #facc15!important;
+    background-color:#fefce8!important;
 }
+div[data-testid="stFileUploader"] section div{color:#000000!important;}
+div[data-testid="stFileUploader"] button{
+    background:#fde047!important; color:#000000!important; border:1.5px solid #000000!important; font-weight:900!important;
+}
+div[data-testid="stFileUploader"] small{color:#000000!important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -240,21 +238,15 @@ def generar_pdf_bytes(logo_emp, logo_mar, formato_sel):
 if st.session_state.print_now and st.session_state.data:
     pdf_bytes = generar_pdf_bytes(logo_empresa, logo_marcas, formato)
     if pdf_bytes:
-        b64 = base64.b64encode(pdf_bytes).decode()
-        # VISOR CORREGIDO
-        st.success("PDF Generado - Dale a Descargar o Imprimir")
-        st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name="etiquetas.pdf", mime="application/pdf", use_container_width=True)
-        pdf_display = f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="600" type="application/pdf"></iframe>'
-        st.markdown(pdf_display, unsafe_allow_html=True)
-        # Auto print
-        st.components.v1.html(f"""
-        <script>
-        var pdfData="data:application/pdf;base64,{b64}";
-        var iframe=document.createElement('iframe'); iframe.style.display='none'; iframe.src=pdfData;
-        document.body.appendChild(iframe);
-        iframe.onload=function(){{setTimeout(function(){{iframe.contentWindow.focus(); iframe.contentWindow.print();}},600);}}
-        </script>
-        """, height=0)
+        st.success(f"✅ PDF Generado - {len(st.session_state.data)} etiquetas")
+        c1,c2 = st.columns(2)
+        with c1:
+            st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name="etiquetas.pdf", mime="application/pdf", use_container_width=True, type="primary")
+        with c2:
+            b64 = base64.b64encode(pdf_bytes).decode()
+            st.components.v1.html(f"""
+            <button onclick="var w=window.open(); w.document.write('<iframe src=data:application/pdf;base64,{b64} style=width:100%;height:100%><\\/iframe>'); w.document.close(); w.focus(); w.print();" style="width:100%;height:46px;background:#000;color:white;border-radius:10px;font-weight:bold;">🖨️ Imprimir Ahora</button>
+            """, height=60)
     st.session_state.print_now=False
 
 if st.session_state.data:
