@@ -102,40 +102,33 @@ if not st.session_state.logged:
 
 st.markdown("""
 <style>
-/* FONDO GENERAL */
-.stApp{background:#ffffff!important;}
-section[data-testid="stSidebar"]{background:#ffffff!important;}
-
-/* LABELS NEGROS VISIBLES */
-div[data-testid="stTextInput"] label p, 
-div[data-testid="stSelectbox"] label p, 
-div[data-testid="stNumberInput"] label p {
-    color:#000000!important; font-weight:900!important; font-size:13px!important;
+/* TITULOS NEGROS FORZADOS */
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] label p,
+section[data-testid="stSidebar"] div[data-testid="stRadio"] label p,
+section[data-testid="stSidebar"] span {
+    color:#000000!important; opacity:1!important; font-weight:800!important;
 }
-h3, h1{color:#000000!important;}
 
-/* CAJAS BLANCAS */
-div[data-testid="stTextInput"] input{
-    background:#ffffff!important; color:#000000!important; 
-    border:2px solid #000000!important; height:46px!important; font-weight:700!important;
-}
-div[data-baseweb="select"] > div{background:#ffffff!important; border:2px solid #000000!important;}
-div[data-baseweb="select"] span{color:#000000!important; font-weight:700!important;}
-div[data-testid="stNumberInput"] input{background:#ffffff!important; color:#000000!important; border:2px solid #000000!important;}
+/* RADIO FORMATO NEGRO */
+div[data-testid="stRadio"] div{color:#000000!important;}
+div[data-testid="stRadio"] label{color:#000000!important;}
 
-/* UPLOAD AMARILLO Y BLANCO - FIX DEL NEGRO */
+/* CAJA UPLOAD AMARILLA - CLARA */
 div[data-testid="stFileUploader"]{
-    background:#fefce8!important; border:2px solid #facc15!important; border-radius:12px!important;
+    background:#FFFBEB!important; background-color:#FFFBEB!important;
+    border:2px dashed #FACC15!important; border-radius:14px!important;
 }
 div[data-testid="stFileUploader"] section{
-    background:#fefce8!important; border:2px dashed #facc15!important;
-    background-color:#fefce8!important;
+    background:#FFFBEB!important; background-color:#FFFBEB!important;
+    border:0px!important;
 }
-div[data-testid="stFileUploader"] section div{color:#000000!important;}
 div[data-testid="stFileUploader"] button{
-    background:#fde047!important; color:#000000!important; border:1.5px solid #000000!important; font-weight:900!important;
+    background:#FDE047!important; color:#000000!important; 
+    border:1.5px solid #000000!important; font-weight:900!important;
 }
-div[data-testid="stFileUploader"] small{color:#000000!important;}
 </style>
 """, unsafe_allow_html=True)
 
