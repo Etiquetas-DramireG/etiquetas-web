@@ -424,13 +424,20 @@ if not st.session_state.logged:
     with c2:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown('<div class="login-card"><div class="login-header">Iniciar Sesión</div><div class="login-body">', unsafe_allow_html=True)
-        u = st.text_input("Usuario", placeholder="Ingrese su usuario", key="login_user_final")
-        p = st.text_input("Contraseña", type="password", placeholder="Ingrese su contraseña", key="login_pass_final")
+        
+        # Agregamos placeholders limpios para evitar que el navegador sugiera datos antiguos
+        u = st.text_input("Usuario", placeholder="Escriba su usuario aquí...", key="login_user_final", label_visibility="visible")
+        
+        # Al poner placeholder y un tipo password limpio, reducimos la sugerencia de Google Chrome
+        p = st.text_input("Contraseña", type="password", placeholder="••••••••", key="login_pass_final", label_visibility="visible")
+        
         aceptar = st.button("→ Aceptar", type="primary", use_container_width=True)
         
-        col1,col2 = st.columns([2.5,1])
-        with col2: cancelar = st.button("Cancelar", key="cancelar_final")
+        col1, col2 = st.columns([2.5, 1])
+        with col2: 
+            cancelar = st.button("Cancelar", key="cancelar_final")
         st.markdown('</div></div>', unsafe_allow_html=True)
+        
 
         if aceptar:
             if u=="admin" and p=="dramireng123":
