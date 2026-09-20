@@ -18,21 +18,61 @@ for k in ["w_bulto","w_total"]:
 if "w_destino" not in st.session_state: st.session_state.w_destino="LIMA - LIMA"
 
 def buscar_dni_ruc(doc, token):
-    doc=doc.strip()
-    if token:
+    doc = doc.strip()
+    if not doc: return None
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    # Intentamos con y sin token en varios endpoints gratis
+    urls = []
+    if len(doc) == 8:
+        if token: urls.append(f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}")
+        urls.append(f"https://dniruc.apisperu.com/api/v1/dni/{doc}")
+        urls.append(f"https://api.decolecta.com/v1/reniec/dni?numero={doc}")
+    if len(doc) == 11:
+        if token: urls.append(f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}")
+        urls.append(f"https://dniruc.apisperu.com/api/v1/ruc/{doc}")
+
+    for url in urls:
         try:
-            if len(doc)==8:
-                r=requests.get(f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=8)
-                if r.status_code==200:
-                    d=r.json()
+            r = requests.get(url, headers=headers, timeout=8)
+            if r.status_code == 200:
+                d = r.json()
+                # RENIEC
+                if "nombres" in d:
                     nombre = f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
-                    if nombre: return nombre
-            if len(doc)==11:
-                r=requests.get(f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=8)
-                if r.status_code==200:
-                    return r.json().get('nombre') or r.json().get('razonSocial')
-        except: pass
+                    if len(nombre) > 3: return nombre
+                if "nombre" in d and d["nombre"]: return d["nombre"]
+                if "razonSocial" in d and d["razonSocial"]: return d["razonSocial"]
+                if "nombres" in d and "apellido" in str(d).lower():
+                    return d.get("nombre") or d.get("razonSocial")
+        except: continue
     return None
+
+def buscar_dni_logic():
+    token = st.session_state.get("api_token_input","").strip()
+    doc1 = st.session_state.get("w_dni","").strip()
+    doc2 = st.session_state.get("w_dni2","").strip()
+    
+    encontro = False
+    if doc1:
+        res1 = buscar_dni_ruc(doc1, token)
+        if res1:
+            st.session_state.w_nombre = res1
+            st.toast(f"✅ DNI 1 encontrado: {res1}")
+            encontro = True
+        else:
+            st.toast(f"❌ No se encontró DNI 1: {doc1}")
+
+    if doc2:
+        res2 = buscar_dni_ruc(doc2, token)
+        if res2:
+            st.session_state.w_nombre2 = res2
+            st.toast(f"✅ DNI 2 encontrado: {res2}")
+            encontro = True
+        else:
+            st.toast(f"❌ No se encontró DNI 2: {doc2}")
+    
+    if not doc1 and not doc2:
+        st.toast("⚠️ Escribe DNI 1 o DNI 2")
 
 def buscar_click():
     token = st.session_state.api_token_input
@@ -210,29 +250,84 @@ def generar_pdf_bytes(logo_emp, logo_mar, formato_sel):
     pagesize = landscape(A4) if is_horizontal else A4
     buffer=io.BytesIO()
     c=canvas.Canvas(buffer, pagesize=pagesize)
-    w,h=pagesize; items = 2 if is_horizontal else 4; lh = h/items
+    w,h=pagesize
+    items = 2 if is_horizontal else 4
+    lh = h/items
+
     for idx,row in enumerate(st.session_state.data):
-        pos=idx%items; y_top=h-(pos*lh)
-        c.setStrokeColorRGB(0,0,0); c.setLineWidth(1.5); c.rect(10, y_top-lh+10, w-20, lh-20)
-        c.setFont("Helvetica-Bold",20); c.drawString(20, y_top-32, f"{row['DESTINO'].split('-')[-1].strip()}")
-        c.setFont("Helvetica-Bold",13); c.drawString(w/2-20, y_top-32, f"({row['BULTOS']})")
-        c.line(15, y_top-42, w-115, y_top-42)
-        c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-58, f"ATT: {row['ATT 1']}")
-        c.setFont("Helvetica",8); c.drawString(20, y_top-71, f"DNI/RUC: {row['DNI 1']} | FACTURA: {row['FACTURA']}")
+        pos=idx%items
+        y_top=h-(pos*lh)
+        
+        # BORDE
+        c.setStrokeColorRGB(0,0,0)
+        c.setLineWidth(1.8)
+        c.rect(10, y_top-lh+10, w-20, lh-20)
+
+        # 1. DESTINO MAS GRANDE
+        c.setFont("Helvetica-Bold", 26)
+        c.drawString(22, y_top-38, f"{row['DESTINO'].split('-')[-1].strip()}")
+        
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(w/2-15, y_top-38, f"({row['BULTOS']})")
+        
+        c.setLineWidth(1.2)
+        c.line(15, y_top-50, w-15, y_top-50)
+
+        # 2. LETRA MAS GRANDE Y NEGRITA
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(20, y_top-72, f"ATT: {row['ATT 1']}")
+        
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(20, y_top-90, f"DNI/RUC: {row['DNI 1']} | FACTURA: {row['FACTURA']}")
+
         if row['ATT 2']:
-            c.setFont("Helvetica-Bold",9); c.drawString(20, y_top-84, f"ATT 2: {row['ATT 2']} - DNI 2: {row['DNI 2']}")
-            c.setFont("Helvetica-Bold",9); c.drawString(20, y_top-97, f"CELULAR: {row['CELULAR']}")
-        else: c.setFont("Helvetica-Bold",9); c.drawString(20, y_top-84, f"CELULAR: {row['CELULAR']}")
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(20, y_top-108, f"ATT 2: {row['ATT 2']} - DNI 2: {row['DNI 2']}")
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(20, y_top-126, f"CELULAR: {row['CELULAR']}")
+        else:
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(20, y_top-108, f"CELULAR: {row['CELULAR']}")
+
+        # 3. LOGO 1 ARRIBA DERECHA - MAS GRANDE (como tu marca rosada)
         if logo_emp is not None:
-            try: logo_emp.seek(0); im=Image.open(logo_emp).convert("RGBA"); b=io.BytesIO(); im.save(b,format='PNG'); b.seek(0); c.drawImage(ImageReader(b), w-110, y_top-105, width=85, height=65, preserveAspectRatio=True, mask='auto')
+            try:
+                logo_emp.seek(0)
+                im=Image.open(logo_emp).convert("RGBA")
+                b=io.BytesIO()
+                im.save(b,format='PNG')
+                b.seek(0)
+                # ANTES 85x65 -> AHORA 135x95 MUCHO MAS GRANDE
+                c.drawImage(ImageReader(b), w-155, y_top-120, width=135, height=95, preserveAspectRatio=True, mask='auto')
             except: pass
-        if logo_mar is not None:
-            try: logo_mar.seek(0); im2=Image.open(logo_mar).convert("RGBA"); bm=io.BytesIO(); im2.save(bm,format='PNG'); bm.seek(0); c.drawImage(ImageReader(bm), 20, y_top-lh+22, width=280, height=18, preserveAspectRatio=True, mask='auto')
-            except: pass
-        try: qr=qrcode.make(f"{row['DESTINO']}-{row['BULTOS']}-{row['DNI 1']}"); qb=io.BytesIO(); qr.save(qb,format='PNG'); qb.seek(0); c.drawImage(ImageReader(qb), w-65, y_top-lh+15, width=45, height=45)
+
+        # 4. QR MAS GRANDE - ABAJO DERECHA
+        try:
+            qr=qrcode.make(f"{row['DESTINO']}-{row['BULTOS']}-{row['DNI 1']}")
+            qb=io.BytesIO()
+            qr.save(qb,format='PNG')
+            qb.seek(0)
+            # ANTES 45x45 -> AHORA 75x75
+            c.drawImage(ImageReader(qb), w-95, y_top-lh+18, width=75, height=75)
         except: pass
-        if pos==items-1: c.showPage()
-    c.save(); buffer.seek(0); return buffer.getvalue()
+
+        # 5. LOGO 2 ABAJO - MARCAS MAS GRANDE Y LARGO
+        if logo_mar is not None:
+            try:
+                logo_mar.seek(0)
+                im2=Image.open(logo_mar).convert("RGBA")
+                bm=io.BytesIO()
+                im2.save(bm,format='PNG')
+                bm.seek(0)
+                # ANTES 280x18 -> AHORA 400x35 MAS GRANDE
+                c.drawImage(ImageReader(bm), 20, y_top-lh+20, width=400, height=35, preserveAspectRatio=True, mask='auto')
+            except: pass
+
+        if pos==items-1:
+            c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
 
 if st.session_state.print_now and st.session_state.data:
     pdf_bytes = generar_pdf_bytes(logo_empresa, logo_marcas, formato)
