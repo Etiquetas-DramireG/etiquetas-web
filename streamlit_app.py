@@ -26,35 +26,23 @@ if not st.session_state.logged:
             if u=="admin" and p=="dramireng123": st.session_state.logged=True; st.rerun()
     footer_soporte(); st.stop()
 
-# CSS NUEVO - CAJAS BLANCAS
 st.markdown("""
 <style>
 .stApp{background:#f8f9fb !important;} 
-section[data-testid="stSidebar"]{background:white !important;} 
+section[data-testid="stSidebar"]{background:white !important; border-right:1px solid #e5e7eb !important;} 
 section[data-testid="stSidebar"] *{color:#111827 !important;}
 div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p, div[data-testid="stRadio"] label p{color:#111827 !important; font-weight:800 !important; font-size:11px !important;}
 div[data-testid="stTextInput"] input{background:white !important; color:#111827 !important; border:1.5px solid #d1d5db !important; border-radius:10px !important; height:44px !important;}
 div[data-baseweb="select"] > div{background:white !important; border-radius:10px !important;}
-
-/* CAJAS UPLOAD BLANCAS COMO TU QUIERES */
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{
-    background: #ffffff !important; border: 1.5px solid #e5e7eb !important; border-radius:12px !important; padding:10px !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{
-    background: #ffffff !important; border: 1px dashed #9ca3af !important; border-radius:10px !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{
-    background: #f3f4f6 !important; color:#111827 !important; border:1px solid #d1d5db !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] *{
-    color:#111827 !important;
-}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] small{color:#6b7280 !important;}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{background:white !important; border:1.5px solid #e5e7eb !important; border-radius:12px !important;}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{background:white !important; border:1px dashed #9ca3af !important;}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] *{color:#111827 !important;}
+/* TABLA CLARA */
+div[data-testid="stDataFrame"]{background:white !important; border:1.5px solid #e5e7eb !important; border-radius:12px !important;}
 </style>
 """, unsafe_allow_html=True)
 
-# HEADER CON 3 BOTONES ARRIBA
-col_titulo, col_imp, col_limpiar, col_logout = st.columns([4.5, 1.3, 1.3, 1.3])
+col_titulo, col_imp, col_limpiar, col_logout = st.columns([4.2, 1.4, 1.4, 1.4])
 with col_titulo: 
     st.markdown("<h1 style='margin:0; color:#111827;'>DramirenG <span style='color:#ff7a5c'>PRO</span> <span style='font-size:12px; background:#111827; color:white; padding:4px 12px; border-radius:20px;'>v2.0</span></h1>", unsafe_allow_html=True)
 with col_imp:
@@ -73,7 +61,7 @@ with st.sidebar:
     formato = st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA", "A4 HORIZONTAL - TODA LA HOJA", "TÉRMICA 100X150"], label_visibility="collapsed")
     st.markdown("---")
     st.markdown("**Logo DG arriba derecha**")
-    logo_dg = st.file_uploader("Logo DG", type=["png","jpg","jpeg"], label_visibility="collapsed", key="dg")
+    logo_dg = st.file_uploader("Logo DG", type=["png","jpg","jpeg"], key="dg", label_visibility="collapsed")
     st.markdown("**Marcas abajo (Nike, Adidas, etc)**")
     logo_marcas = st.file_uploader("Marcas abajo", type=["png","jpg","jpeg"], key="marcas", label_visibility="collapsed")
 
@@ -123,10 +111,21 @@ if st.session_state.print_now and st.session_state.data:
         </script></body></html>""", height=0)
     st.session_state.print_now = False
 
+# --- ESTO ES LO QUE MARCASTE - AHORA SI SE LEE ---
 if st.session_state.data:
-    st.markdown("#### 📦 Bultos Agregados")
+    st.markdown("""
+    <div style="background:white; border:1.5px solid #e5e7eb; border-radius:12px 12px 0 0; padding:12px 15px; margin-top:15px;">
+        <h4 style="margin:0; color:#111827; font-weight:800;">📦 BULTOS AGREGADOS - LISTA PARA IMPRIMIR</h4>
+        <p style="margin:0; color:#6b7280; font-size:12px;">Aquí van apareciendo los bultos que agregas</p>
+    </div>
+    """, unsafe_allow_html=True)
     st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
 else:
-    st.info("Agrega bultos")
+    st.markdown("""
+    <div style="background:white; border:1.5px dashed #d1d5db; border-radius:12px; padding:20px; margin-top:15px; text-align:center;">
+        <h4 style="margin:0; color:#111827;">📦 BULTOS AGREGADOS</h4>
+        <p style="margin:0; color:#6b7280;">Aún no hay bultos, agrega arriba</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 footer_soporte()
