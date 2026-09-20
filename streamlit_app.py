@@ -90,15 +90,48 @@ def footer_soporte():
     <p style="margin:0; color:white; font-size:11px;">📞 959237626 | ✉️ Soporte.DramirenG@hotmail.com</p></div><div style="height:70px;"></div>""", unsafe_allow_html=True)
 
 if not st.session_state.logged:
-    st.markdown("<style>.stApp{background:#f2f3f7!important;} div[data-testid='stTextInput'] input{background:white!important; color:#111827!important; border:2px solid #111827!important; border-radius:12px!important; height:50px!important;} div[data-testid='stTextInput'] label p{color:#111827!important; font-weight:800!important;}</style>", unsafe_allow_html=True)
-    c1,c2,c3=st.columns([1,1.2,1])
+    st.markdown("""
+    <style>
+    .stApp{background:#f0f2f6!important;}
+    div[data-testid="stTextInput"] input{
+        background:white!important; color:#000000!important; 
+        border:1.5px solid #000000!important; border-radius:10px!important; height:46px!important;
+    }
+    div[data-testid="stTextInput"] label p{color:#000000!important; font-weight:800!important; font-size:12px!important;}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # CENTRADO CON MARCO
+    c1,c2,c3=st.columns([1,1.1,1])
     with c2:
-        st.markdown("<br><br><h1 style='text-align:center; color:#111827;'>Bienvenido</h1>", unsafe_allow_html=True)
-        u=st.text_input("USUARIO", placeholder="Ingresa tu usuario"); p=st.text_input("CLAVE", type="password", placeholder="Ingresa tu clave")
-        if st.button("🔐 Entrar", use_container_width=True, type="primary"):
-            if u=="admin" and p=="dramireng123": st.session_state.logged=True; st.rerun()
-            else: st.error("Usuario o clave incorrecta")
-    footer_soporte(); st.stop()
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="
+            background:white; 
+            border:2px solid #000000; 
+            border-radius:20px; 
+            padding:35px 30px 25px 30px; 
+            box-shadow: 0px 10px 30px rgba(0,0,0,0.15);
+        ">
+            <h1 style='text-align:center; color:#111827; margin:0 0 25px 0; font-weight:900;'>Bienvenido</h1>
+        """, unsafe_allow_html=True)
+        
+        u=st.text_input("USUARIO", placeholder="Ingresa tu usuario")
+        p=st.text_input("CLAVE", type="password", placeholder="Ingresa tu clave")
+        
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        login = st.button("Iniciar sesión", use_container_width=True, type="primary")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        if login:
+            if u=="admin" and p=="dramireng123": 
+                st.session_state.logged=True; st.rerun()
+            else: 
+                st.error("Usuario o clave incorrecta")
+
+    footer_soporte()
+    st.stop()
 
 st.markdown("""
 <style>
