@@ -459,10 +459,15 @@ else:
 
     with st.sidebar:
         st.markdown("### ⚙️ Configuración")
-        formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","A4 HORIZONTAL - 2 POR HOJA","TÉRMICA 100X150"], label_visibility="visible")
+        # CORREGIDO: Cambiado "2 POR HOJA" a "1 POR HOJA" para que coincida con la realidad
+        formato = st.radio(
+            "FORMATO", 
+            ["A4 VERTICAL - 4 POR HOJA", "A4 HORIZONTAL - 1 POR HOJA", "TÉRMICA 100X150"], 
+            label_visibility="visible"
+        )
         st.text_input("TOKEN API", type="password", placeholder="Token opcional", key="api_token_input")
-        logo_empresa=st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="logo_emp")
-        logo_marcas=st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="logo_mar")
+        logo_empresa = st.file_uploader("TU LOGO", type=["png", "jpg", "jpeg"], key="logo_emp")
+        logo_marcas = st.file_uploader("Marcas", type=["png", "jpg", "jpeg"], key="logo_mar")
 
     PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","LIMA - LIMA","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA"])
 
