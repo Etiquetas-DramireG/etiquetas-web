@@ -1,291 +1,140 @@
 import streamlit as st
-from fpdf import FPDF
-import os, qrcode, requests
+import pandas as pd
+import requests, qrcode, io, os
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from PIL import Image
+
 st.set_page_config(page_title="DramirenG PRO", layout="wide", page_icon="🏷️")
 
+# --- ESTILO BLANCO PRO COMO TU FOTO ---
 st.markdown("""
 <style>
-/* FONDO PRO */
-.stApp { background: #0e1117; }
-section[data-testid="stSidebar"] { background: #1c1f26 !important; border-right: 1px solid #2a2e39; }
+.stApp { background: #f6f7f9 !important; }
+section[data-testid="stSidebar"] { background: #ffffff !important; border-right: 1px solid #e5e7eb; }
+h1,h2,h3,p,label { color: #111827 !important; font-family: 'Inter', sans-serif; }
 
-/* INPUTS TIPO APPLE */
-div[data-testid="stTextInput"] input, div[data-testid="stNumberInput"] input {
-    background: #262a34 !important;
-    border: 1px solid #3a3f4f !important;
-    border-radius: 10px !important;
-    color: white !important;
-    padding: 12px !important;
+div[data-testid="stTextInput"] input {
+    background: #ffffff !important; border: 1px solid #e5e7eb !important;
+    border-radius: 12px !important; height: 46px !important; font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-div[data-testid="stTextInput"] input:focus {
-    border-color: #ff9900 !important;
-    box-shadow: 0 0 0 1px #ff9900 !important;
+label p { font-weight: 700 !important; font-size: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
+
+div[data-testid="stDataFrame"] {
+    background: white; border-radius: 16px !important; border: 1px solid #e5e7eb !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
+.stButton button { border-radius: 12px !important; height: 46px !important; font-weight: 700 !important; }
 
-/* BOTONES PRO - NARANJA DRAMIRENG */
-div[data-testid="stButton"] button {
-    background: linear-gradient(90deg, #ff9900, #ff6a00) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 700 !important;
-    height: 48px !important;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 15px rgba(255,153,0,0.3);
-    transition: 0.2s;
-}
-div[data-testid="stButton"] button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255,153,0,0.5);
-}
-
-/* TABLA PRO */
-div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
-
-/* TITULO */
-h1 { font-family: 'Segoe UI', sans-serif; font-weight: 800 !important; }
-
-/* RADIO */
-div[data-testid="stRadio"] { background: #262a34; padding: 15px; border-radius: 12px; }
+#btn-buscar button { background: #111827 !important; color: white !important; }
+#btn-agregar button { background: #ff7a5c !important; color: white !important; box-shadow: 0 4px 15px rgba(255,122,92,0.4); }
 </style>
 """, unsafe_allow_html=True)
 
-# HEADER PRO CON LOGO
-col_logo, col_title = st.columns([1, 10])
-with col_logo:
-    if os.path.exists("logo_dg.png"):
-        st.image("logo_dg.png", width=60)
-with col_title:
-    st.markdown("<h1 style='margin:0; padding-top:5px;'>DramirenG <span style='color:#ff9900; font-weight:300;'>PRO</span> <span style='font-size:14px; background:#ff9900; color:white; padding:3px 10px; border-radius:20px; margin-left:10px;'>v2.0</span></h1><p style='color:#8b949e; margin:0;'>Sistema de Despacho Nacional</p>", unsafe_allow_html=True)
-st.set_page_config(page_title="DramirenG", layout="centered")
-if "login" not in st.session_state: st.session_state.login=False
-if "lista" not in st.session_state: st.session_state.lista=[]
-if "clientes" not in st.session_state: st.session_state.clientes={}
+if 'data' not in st.session_state:
+    st.session_state.data = []
 
-if st.session_state.get("do_clear"):
-    for k in ["dni","nombre","destino","factura","celular"]:
-        st.session_state.pop(k, None)
-    st.session_state["do_clear"]=False
+# --- SIDEBAR ---
+with st.sidebar:
+    st.markdown("### ⚙️ Configuración")
+    token = st.text_input("Token API Perú", type="password")
+    formato = st.radio("Formato:", ["A4 Vertical - 4 por hoja (una sobre otra)", "A4 Horizontal - toda la hoja", "Térmica 100x150"])
+    st.markdown("**Logo DG arriba derecha**")
+    logo_dg_file = st.file_uploader(" ", type=["png","jpg"], key="dg")
+    st.markdown("**Marcas abajo**")
+    logo_marcas_file = st.file_uploader("  ", type=["png","jpg"], key="marcas")
 
-if os.path.exists("clientes_guardados.txt"):
-    try:
-        with open("clientes_guardados.txt","r",encoding="utf-8") as f:
-            for l in f:
-                p=l.strip().split(",")
-                if len(p)>=2: st.session_state.clientes[p[0]]=p
-    except: pass
+# --- HEADER ---
+st.markdown("<h1>DramirenG <span style='color:#ff7a5c'>PRO</span> <span style='font-size:13px; background:#111827; color:white; padding:4px 12px; border-radius:20px;'>v2.0</span></h1>", unsafe_allow_html=True)
 
-PROVINCIAS = ["LIMA","AREQUIPA","TRUJILLO","CHICLAYO","PIURA","SULLANA","TALARA","CUSCO","PUNO","TACNA","ICA","HUANCAYO","IQUITOS","PISCO","CHACHAPOYAS","HUARAZ","AYACUCHO","CAJAMARCA","CALLAO","TUMBES","MOYOBAMBA","TARAPOTO"]
+# --- FORMULARIO COMO EN TU FOTO ---
+c1, c2 = st.columns([1, 2.5])
+with c1: dni = st.text_input("DNI/RUC", value="75098930")
+with c2: nombre = st.text_input("Nombre", value="DAVID GRABIEL RAMIREZ NIEVES")
 
-def buscar_dni_api(dni, token):
-    dni=dni.strip()
-    if len(dni)==7 and dni.isdigit(): dni="0"+dni
-    if dni in st.session_state.clientes:
-        return st.session_state.clientes[dni][1]
-    if not token: return None
-    try:
-        if len(dni)==8:
-            r=requests.post("https://apiperu.dev/api/dni", json={"dni":dni}, headers={"Authorization":f"Bearer {token}"}, timeout=6, verify=False)
-            if r.status_code==200 and r.json().get("success"):
-                d=r.json()["data"]
-                return f"{d.get('nombres','')} {d.get('apellido_paterno','')} {d.get('apellido_materno','')}".strip().upper()
-        else:
-            r=requests.post("https://apiperu.dev/api/ruc", json={"ruc":dni}, headers={"Authorization":f"Bearer {token}"}, timeout=6, verify=False)
-            if r.status_code==200 and r.json().get("success"):
-                return r.json()["data"].get("nombre_o_razon_social","").upper()
-    except: pass
-    try:
-        t="dni" if len(dni)==8 else "ruc"
-        r=requests.get(f"https://api.apis.net.pe/v1/{t}?numero={dni}", headers={"Authorization":f"Bearer {token}"}, timeout=5).json()
-        return (r.get('nombre') or r.get('razonSocial') or "").upper()
-    except: return None
+c3, c4, c5, c6 = st.columns([1.2, 1.2, 0.6, 0.6])
+with c3: destino = st.text_input("DESTINO", value="sullana")
+with c4: celular = st.text_input("CELULAR", value="959237626")
+with c5: bulto = st.number_input("Bulto", min_value=1, value=1, step=1)
+with c6: total = st.number_input("Total", min_value=1, value=4, step=1)
 
-import datetime
-
-if not st.session_state.login:
-    # CSS PARA QUE SE VEA COMO TU TKINTER
-    st.markdown("""
-        <style>
-        .stApp { background-color: #001a33; }
-        .login-card {
-            background-color: #003366;
-            padding: 25px 30px 0px 30px;
-            border-radius: 8px;
-            border: 2px solid #002244;
-            text-align: center;
-            max-width: 400px;
-            margin: 40px auto 0 auto;
-        }
-        .soporte-box {
-            background-color: #002244;
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 0 0 8px 8px;
-            margin-left: -30px;
-            margin-right: -30px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    ano_actual = datetime.datetime.now().strftime("%Y")
-
-    # CONTENEDOR CENTRADO
-    c1,c2,c3 = st.columns([1,1.2,1])
-    with c2:
-        st.markdown(f"""
-        <div class="login-card">
-            <p style="color:white; font-weight:bold; font-family:Arial; font-size:16px; margin-bottom:2px;">¡BIENVENIDO!</p>
-            <p style="color:#b3d9ff; font-style:italic; font-family:Arial; font-size:12px; margin-top:0px;">Control de Despachos Oficial {ano_actual}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        with st.container(border=False):
-            # inputs estilo Tkinter
-            u = st.text_input("Nombre de Usuario:", key="user_login", placeholder="", label_visibility="visible")
-            p = st.text_input("Contraseña de Seguridad:", type="password", key="pass_login", label_visibility="visible")
-            
-            # Estilo para labels blancos
-            st.markdown("""
-                <style>
-                label { color: white !important; font-weight: bold !important; font-family: Arial !important; font-size: 13px !important; }
-                div[data-testid="stTextInput"] input { text-align: center; }
-                </style>
-            """, unsafe_allow_html=True)
-
-            btn = st.button("🔓 INGRESAR AL SISTEMA", use_container_width=True, type="primary")
-
-            if btn:
-                if u == "admin" and p == "dramiren2026":
-                    st.session_state.login = True
+c7, c8 = st.columns(2)
+with c7:
+    st.markdown('<div id="btn-buscar">', unsafe_allow_html=True)
+    if st.button("🔍 Buscar", use_container_width=True):
+        if dni and token:
+            try:
+                url = f"https://apiperu.dev/api/dni/{dni}" if len(dni)==8 else f"https://apiperu.dev/api/ruc/{dni}"
+                r = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=5)
+                if r.status_code==200:
+                    d=r.json()
+                    st.session_state.nombre_api = d['data'].get('nombre_completo') or d['data'].get('nombre_o_razon_social')
                     st.rerun()
-                else:
-                    st.error("Acceso Denegado: El usuario o la contraseña son incorrectos.")
+            except: st.error("Error API o Token")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        # SOPORTE ABAJO COMO TU TKINTER
-        st.markdown("""
-        <div style="background-color:#002244; padding:10px; border-radius:6px; text-align:center; border:1px solid #001a33; margin-top:15px;">
-            <p style="color:#99ccff; font-weight:bold; font-size:11px; font-family:Arial; margin:0px;">Soporte Técnico de Control Soporte.DramirenG:</p>
-            <p style="color:white; font-size:11px; font-family:Arial; margin:2px;">📞 Celular: 959237626</p>
-            <p style="color:white; font-size:11px; font-family:Arial; margin:2px;">✉️ Correo: Soporte.DramirenG@hotmail.com</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.stop()
-
-st.sidebar.title("⚙️ Configuración")
-api_token = st.sidebar.text_input("Token API Perú", type="password")
-formato = st.sidebar.radio("Formato:", ["A4 Vertical - 4 por hoja (una sobre otra)", "A4 Horizontal - toda la hoja", "Térmica 100x150"])
-up1 = st.sidebar.file_uploader("Logo DG arriba derecha", type=["png","jpg","jpeg"])
-if up1:
-    open("logo_dg.png","wb").write(up1.getbuffer())
-    open("logo_imagen1.png","wb").write(up1.getbuffer())
-up2 = st.sidebar.file_uploader("Marcas abajo", type=["png","jpg","jpeg"])
-if up2:
-    open("marcas.png","wb").write(up2.getbuffer())
-    open("logo_imagen2.png","wb").write(up2.getbuffer())
-
-st.title("🏷️ DramirenG")
-c1,c2,c3,c4,c5 = st.columns([1.2,1.8,1.2,1,1])
-with c1:
-    dni=st.text_input("DNI/RUC", key="dni")
-    if st.button("🔍 Buscar"):
-        nom=buscar_dni_api(dni, api_token)
-        if nom: st.session_state["nombre"]=nom; st.rerun()
-        else: st.warning("No encontrado")
-with c2: nombre=st.text_input("Nombre", key="nombre")
-with c3:
-    destino_input=st.text_input("DESTINO", key="destino", placeholder="LIMA")
-    ms=[p for p in PROVINCIAS if destino_input.upper() in p][:5] if destino_input else []
-    if ms and destino_input.upper() not in PROVINCIAS:
-        sel=st.selectbox("Sugerencias", ms)
-        if st.button("✅ Usar"): st.session_state["destino"]=sel; st.rerun()
-    destino=st.session_state.get("destino","").upper()
-with c4: factura=st.text_input("FACTURA", key="factura").upper()
-with c5: celular=st.text_input("CELULAR", key="celular")
-
-c6,c7,c8=st.columns([1,1,2])
-with c6: b1=st.number_input("Bulto",1,99,1)
-with c7: b2=st.number_input("Total",1,99,4)
 with c8:
-    if st.button("➕ Agregar", type="primary", use_container_width=True):
-        if dni and nombre and destino:
-            for i in range(1,b2+1):
-                st.session_state.lista.append({"dni":dni,"nombre":nombre,"destino":destino,"factura":factura,"celular":celular,"b1":i,"b2":b2})
-            st.session_state["do_clear"]=True; st.rerun()
+    st.markdown('<div id="btn-agregar">', unsafe_allow_html=True)
+    if st.button("+ Agregar", use_container_width=True):
+        for i in range(bulto, total+1):
+            st.session_state.data.append({
+                "dni": dni, "nombre": nombre, "destino": destino.upper(),
+                "factura": "F001-5652", "celular": celular, "b1": i, "b2": total
+            })
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# FUNCION UNICA CON MAS MARGEN - COMO TU FOTO LIMA
-def dibujar(x,y,d,w,h,pdf):
-    pdf.set_draw_color(0,0,0)
-    pdf.set_line_width(0.9 if h<100 else 1.2)
-    pdf.rect(x,y,w,h)
-    pdf.line(x, y+22, x+w, y+22)
-
-    # HEADER - AREQUIPA + (1/4)
-    pdf.set_font("Helvetica","B", 32 if h<100 else 55) # LETRA MAS GRANDE
-    pdf.set_xy(x+6, y+4)
-    pdf.cell(95, 13, d['destino'], align='L')
-
-    pdf.set_font("Helvetica","B", 18 if h<100 else 30)
-    pdf.set_xy(x+95, y+6)
-    pdf.cell(35, 11, f"({d['b1']}/{d['b2']})", align='C')
-
-    # LOGO DG ARRIBA DEL QR - A LA DERECHA GRANDE
-    l1="logo_dg.png" if os.path.exists("logo_dg.png") else "logo_imagen1.png" if os.path.exists("logo_imagen1.png") else None
-    if l1:
-        # ARRIBA DEL QR, lado derecho, como tu foto AREQUIPA
-        pdf.image(l1, x+w-48, y+2, 44, 28 if h<100 else 50)
-
-    # CUERPO - deja espacio a la derecha para el DG
-    pdf.set_font("Arial","B", 12 if h<100 else 20)
-    pdf.set_xy(x+6, y+26)
-    pdf.cell(w-55, 6, f"ATT: {d['nombre'].upper()}")
-
-    pdf.set_xy(x+6, y+33)
-    pdf.set_font("Arial","", 10 if h<100 else 14)
-    pdf.cell(w-55, 5, f"DNI/RUC: {d['dni']}  |  FACTURA: {d['factura'].upper()}")
-
-    pdf.set_xy(x+6, y+40)
-    pdf.set_font("Arial","B", 11 if h<100 else 16)
-    pdf.cell(w-55, 5, f"CELULAR: {d['celular']}")
-
-    # MARCAS ABAJO
-    l2="marcas.png" if os.path.exists("marcas.png") else "logo_imagen2.png" if os.path.exists("logo_imagen2.png") else None
-    if l2:
-        pdf.image(l2, x+6, y+h-14, 120, 9)
-
-    # QR ABAJO DEL DG
-    qr=qrcode.make(f"{d['nombre']}|{d['destino']}|{d['dni']}"); qr.save("qr.png")
-    pdf.image("qr.png", x+w-20, y+h-16, 13, 13)
-
-# GENERAR PDF
-if st.session_state.lista:
-    st.dataframe(st.session_state.lista, use_container_width=True)
-
-    if "Térmica" in formato:
-        pdf=FPDF(orientation='P', unit='mm', format=(100,150))
-        pdf.set_auto_page_break(auto=False)
-        for d in st.session_state.lista:
-            pdf.add_page()
-            dibujar(3,3,d,94,144,pdf)
-    elif "Horizontal" in formato:
-        pdf=FPDF(orientation='L', format='A4')
-        for d in st.session_state.lista:
-            pdf.add_page()
-            dibujar(5,5,d,287,200,pdf)
-    else:
-        pdf=FPDF(orientation='P', format='A4')
-        pdf.set_auto_page_break(auto=False)
-        pos_y=[14, 82, 150, 218] # mas separacion
-        for i,d in enumerate(st.session_state.lista):
-            if i%4==0: pdf.add_page()
-            dibujar(10,pos_y[i%4],d,190,60,pdf)
-
-    pdf_bytes = bytes(pdf.output())
-    c1,c2=st.columns(2)
-    with c1:
-        st.download_button("⬇️ DESCARGAR PDF", pdf_bytes, "etiquetas_DramirenG.pdf", "application/pdf", use_container_width=True, type="primary")
-    with c2:
+# --- TABLA CON EDITAR Y BORRAR ---
+if st.session_state.data:
+    df = pd.DataFrame(st.session_state.data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    
+    col_del, col_pdf = st.columns([1,2])
+    with col_del:
         if st.button("🗑️ Limpiar", use_container_width=True):
-            st.session_state.lista=[]; st.rerun()
+            st.session_state.data = []
+            st.rerun()
+    with col_pdf:
+        # GENERAR PDF
+        if st.button("📥 DESCARGAR PDF", use_container_width=True, type="primary"):
+            buffer = io.BytesIO()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            w, h = A4
+            lh = h / 4  # 4 etiquetas por hoja
+
+            for idx, row in enumerate(df.to_dict('records')):
+                pos = idx % 4
+                y_top = h - (pos * lh)
+                
+                # Marco
+                c.setStrokeColorRGB(0.9,0.9,0.9)
+                c.rect(20, y_top - lh + 10, w-40, lh-20)
+
+                # DG ARRIBA DERECHA
+                if logo_dg_file:
+                    c.drawImage(ImageReader(Image.open(logo_dg_file)), w-120, y_top-50, width=80, height=30, preserveAspectRatio=True)
+
+                # DATOS
+                c.setFont("Helvetica-Bold", 14)
+                c.drawString(30, y_top-30, f"DESTINO: {row['destino']}")
+                c.setFont("Helvetica", 10)
+                c.drawString(30, y_top-50, f"{row['nombre']}")
+                c.drawString(30, y_top-65, f"DNI: {row['dni']} | CEL: {row['celular']} | FAC: {row['factura']}")
+                c.setFont("Helvetica-Bold", 16)
+                c.drawString(30, y_top-90, f"BULTO {row['b1']} DE {row['b2']}")
+
+                # QR
+                qr = qrcode.make(f"{row['destino']} - {row['nombre']} - B{row['b1']}/{row['b2']}")
+                c.drawImage(ImageReader(qr), w-120, y_top-120, width=70, height=70)
+
+                # MARCAS ABAJO
+                if logo_marcas_file:
+                    c.drawImage(ImageReader(Image.open(logo_marcas_file)), 30, y_top - lh + 25, width=w-80, height=25, preserveAspectRatio=True)
+
+                if pos == 3:
+                    c.showPage()
+            c.save()
+            st.download_button("⬇️ Bajar PDF listo", buffer.getvalue(), "etiquetas_dramireng.pdf", "application/pdf", use_container_width=True)
 else:
-    st.info("Vacío. Agrega clientes.")                                                                                                                                                             
+    st.info("Agrega bultos para ver la tabla")
