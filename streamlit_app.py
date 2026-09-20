@@ -24,29 +24,63 @@ if "w_destino" not in st.session_state: st.session_state.w_destino = "LIMA - LIM
 
 def buscar_dni_ruc(doc, token):
     doc = doc.strip()
-    if not doc: return None
+    if not doc: 
+        return None
+        
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     urls = []
-    if len(doc) == 8:
-        if token: urls.append(f"https://apis.net.pe{doc}")
-        urls.append(f"https://apisperu.com{doc}")
-        urls.append(f"https://decolecta.com{doc}")
-    if len(doc) == 11:
-        if token: urls.append(f"https://apis.net.pe{doc}")
-        urls.append(f"https://apisperu.com{doc}")
+    
+    # 1. CONSTRUCCIÓN DE ENDPOINTS SEGÚN LONGITUD DEL DOCUMENTO
+    if len(doc) == 8:  # CONSULTA DNI
+        if token: 
+            urls.append((f"https://apis.net.pe{doc}", "apis_net"))
+            urls.append((f"https://apiinti.dev{doc}", "apiinti"))
+        urls.append((f"https://apisperu.com{doc}", "apisperu"))
+        urls.append((f"https://decolecta.com{doc}", "decolecta"))
+        
+    elif len(doc) == 11:  # CONSULTA RUC
+        if token: 
+            urls.append((f"https://apis.net.pe{doc}", "apis_net"))
+            urls.append((f"https://app.apiinti.dev/api/v1/ruc/{doc}", "apiinti"))
+        urls.append((f"https://apisperu.com{doc}", "apisperu"))
 
-    for url in urls:
+    # 2. PROCESAMIENTO SEGURO DE LAS RESPUESTAS API
+    for url, proveedor in urls:
         try:
-            r = requests.get(url, headers=headers, timeout=5)
+            r = requests.get(url, headers=headers, timeout=6)
             if r.status_code == 200:
                 d = r.json()
-                if "nombres" in d:
-                    nombre = f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
-                    if len(nombre) > 3: return nombre
-                if d.get("nombre"): return d["nombre"]
-                if d.get("razonSocial"): return d["razonSocial"]
-        except: continue
+                
+                # Mapeo según el formato de respuesta del proveedor externo
+                if proveedor == "apis_net":
+                    if "nombres" in d and "apellidoPaterno" in d:
+                        return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+                    if "razonSocial" in d: 
+                        return d.get("razonSocial")
+                        
+                elif proveedor == "apiinti":
+                    # Formato estandarizado de ApiInti { "success": true, "data": { ... } }
+                    data_block = d.get("data", {})
+                    if data_block:
+                        if "nombre_completo" in data_block: return data_block.get("nombre_completo")
+                        if "razon_social" in data_block: return data_block.get("razon_social")
+                        if "nombre" in data_block: return data_block.get("nombre")
+                        
+                elif proveedor in ["apisperu", "decolecta"]:
+                    if "nombre" in d and d["nombre"]: return d["nombre"]
+                    if "razonSocial" in d and d["razonSocial"]: return d["razonSocial"]
+                    if "nombres" in d:
+                        return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+                        
+                # Búsqueda genérica de respaldo si cambia la estructura de la clave JSON
+                for key in ["nombreCompleto", "nombre", "razonSocial", "razon_social", "nombre_completo"]:
+                    if d.get(key): 
+                        return d[key]
+        except Exception: 
+            continue
+            
     return None
+
 
 def buscar_click():
     token = st.session_state.api_token_input
