@@ -297,108 +297,37 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
 
     return bytes(pdf.output())
 
-def buscar_dni_inteligente(self, campo_dni, campo_nombre):
-    num_doc = self.entries[campo_dni].get().strip()
-    if len(num_doc) == 7 and num_doc.isdigit():
-        num_doc = "0" + num_doc
-        self.entries[campo_dni].delete(0, tk.END)
-        self.entries[campo_dni].insert(0, num_doc)
+# TUS IMPORTS QUE YA TIENES (déjalos)
+# import requests
+# import streamlit as st
 
-    if len(num_doc) != 8 and len(num_doc) != 11:
-        messagebox.showwarning("Documento Inválido", "Ingrese un DNI de 8 números o un RUC de 11 números.")
-        return
+# PEGA ESTO JUSTO DEBAJO DE TUS IMPORTS:
 
-    if self.verificar_autocompletado_local(campo_dni, campo_nombre):
-        return
-
-    # --- LEER TOKEN ---
-    TOKEN_SISTEMA = ""
-    if os.path.exists(ruta_token_drive):
-        with open(ruta_token_drive, "r", encoding="utf-8") as f:
-            TOKEN_SISTEMA = f.read().strip()
-    
-    self.entries[campo_nombre].delete(0, tk.END)
-    self.entries[campo_nombre].insert(0, "BUSCANDO...")
-    self.root.update_idletasks()
-    
-    nombre_encontrado = None
-
-    # 1. INTENTO CON TU TOKEN (apiperu.dev)
-    if TOKEN_SISTEMA:
+def buscar_dni_ruc(doc, token=None):
+    doc = str(doc).strip()
+    if len(doc) not in (8, 11): return None
+    urls = [f"https://api.apis.net.pe/v1/dni?numero={doc}" if len(doc)==8 else f"https://api.apis.net.pe/v1/ruc?numero={doc}"]
+    for url in urls:
         try:
-            headers = {"Authorization": f"Bearer {TOKEN_SISTEMA}", "Accept": "application/json"}
-            if len(num_doc) == 8:
-                url_api = "https://apiperu.dev/api/dni"
-                payload = {"dni": num_doc}
-            else:
-                url_api = "https://apiperu.dev/api/ruc"
-                payload = {"ruc": num_doc}
-            
-            response = requests.post(url_api, json=payload, headers=headers, timeout=6, verify=False)
-            if response.status_code == 200:
-                datos = response.json()
-                if datos.get("success"):
-                    res_data = datos.get("data", {})
-                    if len(num_doc) == 8:
-                        nombres = res_data.get("nombres", "").strip()
-                        ape_p = res_data.get("apellido_paterno", "").strip()
-                        ape_m = res_data.get("apellido_materno", "").strip()
-                        nombre_encontrado = f"{nombres} {ape_p} {ape_m}".strip().upper()
-                    else:
-                        nombre_encontrado = res_data.get("nombre_o_razon_social", "").upper()
-        except:
-            pass
+            r = requests.get(url, timeout=8)
+            if r.status_code == 200:
+                d = r.json()
+                if len(doc)==8 and d.get("nombres"):
+                    return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+                if len(doc)==11:
+                    return (d.get("razonSocial") or d.get("nombre") or "").strip()
+        except: continue
+    return None
 
-    # 2. SI FALLÓ CON TOKEN, BUSCA GRATIS (sin token)
-    if not nombre_encontrado:
-        apis_gratis = [
-            f"https://api.apis.net.pe/v1/dni?numero={num_doc}" if len(num_doc)==8 else f"https://api.apis.net.pe/v1/ruc?numero={num_doc}",
-            f"https://dniruc.apisperu.com/api/v1/dni/{num_doc}" if len(num_doc)==8 else f"https://dniruc.apisperu.com/api/v1/ruc/{num_doc}",
-        ]
-        for url in apis_gratis:
-            try:
-                r = requests.get(url, timeout=6)
-                if r.status_code == 200:
-                    d = r.json()
-                    if len(num_doc)==8:
-                        if d.get("nombres"):
-                            nombre_encontrado = f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip().upper()
-                            break
-                    else:
-                        if d.get("razonSocial") or d.get("nombre"):
-                            nombre_encontrado = (d.get("razonSocial") or d.get("nombre")).upper()
-                            break
-            except:
-                continue
-
-    # 3. RESULTADO
-    self.entries[campo_nombre].delete(0, tk.END)
-    if nombre_encontrado:
-        self.entries[campo_nombre].insert(0, nombre_encontrado)
-        if campo_dni == "DNI / RUC 1":
-            self.entries["Destino"].focus()
-    else:
-        if not TOKEN_SISTEMA:
-            messagebox.showwarning("Falta Configuración", "No se ha configurado ningún Token y la búsqueda gratuita no encontró datos.")
-        else:
-            messagebox.showinfo("Sin Resultados", "El documento no figura en el padrón o el Token es inválido.")
 def buscar_click():
     doc1 = st.session_state.get("w_dni","").strip()
     doc2 = st.session_state.get("w_dni2","").strip()
     if doc1:
         res = buscar_dni_ruc(doc1)
-        if res: 
-            st.session_state.w_nombre = res
-            st.toast(f"✅ DNI 1: {res}")
-        else:
-            st.toast(f"❌ No encontró: {doc1}")
+        if res: st.session_state.w_nombre = res
     if doc2:
         res = buscar_dni_ruc(doc2)
-        if res: 
-            st.session_state.w_nombre2 = res
-            st.toast(f"✅ DNI 2: {res}")
-        else:
-            st.toast(f"❌ No encontró: {doc2}")
+        if res: st.session_state.w_nombre2 = res
             
 def agregar_click():
     if not st.session_state.w_nombre: 
