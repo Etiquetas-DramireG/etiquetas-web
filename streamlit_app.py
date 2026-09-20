@@ -46,11 +46,33 @@ def buscar_dni_api(dni, token):
     except: return None
 
 if not st.session_state.login:
-    st.title("🔐 DramirenG")
-    u=st.text_input("Usuario"); p=st.text_input("Clave",type="password")
-    if st.button("Ingresar"):
-        if u=="admin" and p=="dramiren2026":
-            st.session_state.login=True; st.rerun()
+    # ESTO LO ACHICA Y CENTRA
+    st.markdown("""
+        <style>
+        .block-container {
+            max-width: 450px !important;
+            padding-top: 80px !important;
+            margin: auto !important;
+        }
+        input {
+            border-radius: 10px !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    c1,c2,c3 = st.columns([1, 2.5, 1])
+    with c2:
+        st.markdown("<h1 style='text-align:center'>🔐 DramirenG</h1>", unsafe_allow_html=True)
+        st.write("")
+        u=st.text_input("Usuario", placeholder="admin")
+        p=st.text_input("Clave", type="password", placeholder="••••••••")
+        st.write("")
+        if st.button("Ingresar", use_container_width=True, type="primary"):
+            if u=="admin" and p=="dramiren2026":
+                st.session_state.login=True
+                st.rerun()
+            else: 
+                st.error("Usuario o clave incorrecta")
     st.stop()
 
 st.sidebar.title("⚙️ Configuración")
