@@ -66,50 +66,80 @@ def footer_soporte():
     <p style="margin:0; color:white; font-size:11px;">📞 959237626 | ✉️ Soporte.DramirenG@hotmail.com</p></div><div style="height:70px;"></div>""", unsafe_allow_html=True)
 
 if not st.session_state.logged:
-    # Si ya entro por el login HTML
-    if st.query_params.get("auth") == "ok":
-        st.session_state.logged = True
-        st.rerun()
+    st.markdown("""
+    <style>
+    .stApp{background:#eef1f5!important;}
+    #MainMenu, footer, header{visibility:hidden;}
+    .login-card{
+        background:white; border-radius:12px; 
+        box-shadow:0 6px 25px rgba(0,0,0,0.15);
+        border:1px solid #e5e7eb; overflow:hidden;
+        max-width:420px; margin:auto;
+    }
+    .login-header{padding:16px 22px; font-weight:700; font-size:18px; color:#1f2937; border-bottom:1px solid #e5e7eb;}
+    .login-body{padding:18px 22px 14px 22px;}
+    /* INPUTS COMO TU FOTO */
+    div[data-testid="stTextInput"]{position:relative; margin-bottom:2px;}
+    div[data-testid="stTextInput"] label p{font-size:13px!important; font-weight:600!important; color:#111827!important; margin-bottom:4px!important;}
+    div[data-testid="stTextInput"] input{
+        background:white!important; color:#111827!important;
+        border:1.5px solid #d1d5db!important; border-radius:8px!important;
+        height:42px!important; padding-left:42px!important;
+        font-size:14px!important;
+    }
+    div[data-testid="stTextInput"] input:focus{border-color:#93c5fd!important; box-shadow:0 0 0 2px rgba(147,197,253,0.3)!important;}
+    /* ICONO GRIS IZQUIERDA */
+    div[data-testid="stTextInput"]:nth-of-type(1) > div:before{
+        content:'👤'; position:absolute; left:1px; top:25px; z-index:9;
+        background:#e5e7eb; width:36px; height:40px; display:flex; align-items:center; justify-content:center;
+        border-radius:7px 0 0 7px; border-right:1px solid #d1d5db; font-size:14px;
+        line-height:40px; text-align:center;
+    }
+    div[data-testid="stTextInput"]:nth-of-type(2) > div:before{
+        content:'🔒'; position:absolute; left:1px; top:25px; z-index:9;
+        background:#e5e7eb; width:36px; height:40px; display:flex; align-items:center; justify-content:center;
+        border-radius:7px 0 0 7px; border-right:1px solid #d1d5db; font-size:14px;
+        line-height:40px; text-align:center;
+    }
+    /* BOTON VERDE ACEPTAR */
+    div[data-testid="stButton"] button[kind="primary"]{
+        background:#4CB978!important; color:white!important; border:0!important;
+        border-radius:8px!important; height:42px!important; font-weight:700!important; font-size:15px!important;
+        width:100%!important; margin-top:10px!important;
+    }
+    div[data-testid="stButton"] button[kind="secondary"]{
+        background:white!important; color:#374151!important; border:1.5px solid #d1d5db!important;
+        border-radius:8px!important; height:34px!important; font-size:13px!important; float:right;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    st.markdown("<style>.stApp{background:#eef1f5!important;} #MainMenu, footer, header{visibility:hidden;}</style>", unsafe_allow_html=True)
-
-    c1,c2,c3 = st.columns([1,0.95,1])
+    c1,c2,c3 = st.columns([1,0.9,1])
     with c2:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.components.v1.html("""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; background:white; border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,0.18); border:1px solid #e5e7eb; overflow:hidden; width:100%;">
-          <div style="padding:18px 22px; font-weight:700; font-size:20px; color:#111827; border-bottom:1px solid #e5e7eb;">Iniciar Sesión</div>
-          <div style="padding:20px 22px 16px 22px;">
-            <label style="font-size:13px; font-weight:600; color:#111827;">Usuario</label>
-            <div style="display:flex; align-items:center; border:1.5px solid #93c5fd; border-radius:8px; margin-top:6px; overflow:hidden; background:white;">
-              <div style="background:#e5e7eb; padding:10px 12px; border-right:1px solid #d1d5db;">👤</div>
-              <input id="u" placeholder="Ingrese su usuario" style="border:0; flex:1; padding:10px; outline:none; font-size:14px;">
-            </div>
-            <label style="font-size:13px; font-weight:600; color:#111827; margin-top:14px; display:block;">Contraseña</label>
-            <div style="display:flex; align-items:center; border:1.5px solid #d1d5db; border-radius:8px; margin-top:6px; overflow:hidden; background:white;">
-              <div style="background:#e5e7eb; padding:10px 12px; border-right:1px solid #d1d5db;">🔒</div>
-              <input id="p" type="password" placeholder="Ingrese su contraseña" style="border:0; flex:1; padding:10px; outline:none; font-size:14px;">
-              <div onclick="var i=document.getElementById('p'); i.type=i.type=='password'?'text':'password'" style="padding:0 12px; cursor:pointer; color:#6b7280;">👁️‍🗨️</div>
-            </div>
-            <button onclick="login()" style="width:100%; margin-top:18px; background:#5DB87F; color:white; border:0; border-radius:8px; height:42px; font-weight:700; font-size:15px; cursor:pointer;">→ Aceptar</button>
-            <div style="display:flex; justify-content:flex-end; margin-top:12px;">
-              <button onclick="document.getElementById('u').value=''; document.getElementById('p').value=''" style="background:white; border:1.5px solid #d1d5db; border-radius:8px; padding:6px 18px; font-size:13px; cursor:pointer;">Cancelar</button>
-            </div>
-            <p id="err" style="color:red; font-size:12px; margin-top:8px; display:none;">Usuario o contraseña incorrecta</p>
-          </div>
-        </div>
-        <script>
-        function login(){
-          var u=document.getElementById('u').value;
-          var p=document.getElementById('p').value;
-          if(u==='admin' && p==='dramireng123'){
-            window.top.location.href = window.top.location.href.split('?')[0] + '?auth=ok';
-          }else{
-            document.getElementById('err').style.display='block';
-          }
-        }
-        </script>
-        """, height=350)
+        st.markdown('<div class="login-card"><div class="login-header">Iniciar Sesión</div><div class="login-body">', unsafe_allow_html=True)
+        
+        u = st.text_input("Usuario", placeholder="Ingrese su usuario", key="login_user_final")
+        p = st.text_input("Contraseña", type="password", placeholder="Ingrese su contraseña", key="login_pass_final")
+        
+        aceptar = st.button("→ Aceptar", type="primary", use_container_width=True)
+        
+        col1,col2 = st.columns([2.5,1])
+        with col2:
+            cancelar = st.button("Cancelar", key="cancelar_final")
+        
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        if aceptar:
+            if u=="admin" and p=="dramireng123":
+                st.session_state.logged=True
+                st.rerun()
+            else:
+                st.error("Usuario o contraseña incorrecta")
+        if cancelar:
+            st.session_state.login_user_final=""
+            st.session_state.login_pass_final=""
+            st.rerun()
 
     footer_soporte()
     st.stop()
