@@ -1,94 +1,77 @@
 import streamlit as st
 import pandas as pd
-import qrcode, io, base64, requests
+import qrcode
+import io
+import requests
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from PIL import Image
 
+# 1. Configuración de página (SIEMPRE primero)
 st.set_page_config(page_title="Etiquetas PRO", layout="wide", page_icon="🏷️")
 
-if 'logged' not in st.session_state: st.session_state.logged=False
-if 'data' not in st.session_state: st.session_state.data=[]
-if 'print_now' not in st.session_state: st.session_state.print_now=False
-for k in ["w_dni","w_nombre","w_factura","w_nombre2","w_dni2","w_celular","login_user","login_pass","api_token_input"]:
-    if k not in st.session_state: st.session_state[k]=""
-for k in ["w_bulto","w_total"]:
-    if k not in st.session_state: st.session_state[k]=1
-if "w_destino" not in st.session_state: st.session_state.w_destino="LIMA - LIMA"
+# Inicialización segura de Session State
+if 'logged' not in st.session_state: st.session_state.logged = False
+if 'data' not in st.session_state: st.session_state.data = []
+if 'print_now' not in st.session_state: st.session_state.print_now = False
+
+for k in ["w_dni", "w_nombre", "w_factura", "w_nombre2", "w_dni2", "w_celular", "api_token_input"]:
+    if k not in st.session_state: st.session_state[k] = ""
+for k in ["w_bulto", "w_total"]:
+    if k not in st.session_state: st.session_state[k] = 1
+if "w_destino" not in st.session_state: st.session_state.w_destino = "LIMA - LIMA"
 
 def buscar_dni_ruc(doc, token):
     doc = doc.strip()
     if not doc: return None
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    # Intentamos con y sin token en varios endpoints gratis
     urls = []
     if len(doc) == 8:
-        if token: urls.append(f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}")
-        urls.append(f"https://dniruc.apisperu.com/api/v1/dni/{doc}")
-        urls.append(f"https://api.decolecta.com/v1/reniec/dni?numero={doc}")
+        if token: urls.append(f"https://apis.net.pe{doc}")
+        urls.append(f"https://apisperu.com{doc}")
+        urls.append(f"https://decolecta.com{doc}")
     if len(doc) == 11:
-        if token: urls.append(f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}")
-        urls.append(f"https://dniruc.apisperu.com/api/v1/ruc/{doc}")
+        if token: urls.append(f"https://apis.net.pe{doc}")
+        urls.append(f"https://apisperu.com{doc}")
 
     for url in urls:
         try:
-            r = requests.get(url, headers=headers, timeout=8)
+            r = requests.get(url, headers=headers, timeout=5)
             if r.status_code == 200:
                 d = r.json()
-                # RENIEC
                 if "nombres" in d:
                     nombre = f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
                     if len(nombre) > 3: return nombre
-                if "nombre" in d and d["nombre"]: return d["nombre"]
-                if "razonSocial" in d and d["razonSocial"]: return d["razonSocial"]
-                if "nombres" in d and "apellido" in str(d).lower():
-                    return d.get("nombre") or d.get("razonSocial")
+                if d.get("nombre"): return d["nombre"]
+                if d.get("razonSocial"): return d["razonSocial"]
         except: continue
     return None
-
-def buscar_dni_logic():
-    token = st.session_state.get("api_token_input","").strip()
-    doc1 = st.session_state.get("w_dni","").strip()
-    doc2 = st.session_state.get("w_dni2","").strip()
-    
-    encontro = False
-    if doc1:
-        res1 = buscar_dni_ruc(doc1, token)
-        if res1:
-            st.session_state.w_nombre = res1
-            st.toast(f"✅ DNI 1 encontrado: {res1}")
-            encontro = True
-        else:
-            st.toast(f"❌ No se encontró DNI 1: {doc1}")
-
-    if doc2:
-        res2 = buscar_dni_ruc(doc2, token)
-        if res2:
-            st.session_state.w_nombre2 = res2
-            st.toast(f"✅ DNI 2 encontrado: {res2}")
-            encontro = True
-        else:
-            st.toast(f"❌ No se encontró DNI 2: {doc2}")
-    
-    if not doc1 and not doc2:
-        st.toast("⚠️ Escribe DNI 1 o DNI 2")
 
 def buscar_click():
     token = st.session_state.api_token_input
     doc1 = st.session_state.w_dni.strip()
     if doc1:
         res1 = buscar_dni_ruc(doc1, token)
-        if res1: st.session_state.w_nombre = res1; st.toast(f"DNI 1: {res1}")
+        if res1: 
+            st.session_state.w_nombre = res1
+            st.toast(f"✅ DNI 1: {res1}")
+        else: st.toast(f"❌ No se encontró DNI 1")
     doc2 = st.session_state.w_dni2.strip()
     if doc2:
         res2 = buscar_dni_ruc(doc2, token)
-        if res2: st.session_state.w_nombre2 = res2; st.toast(f"DNI 2: {res2}")
-    if not doc1 and not doc2: st.toast("Escribe DNI 1 o DNI 2")
+        if res2: 
+            st.session_state.w_nombre2 = res2
+            st.toast(f"✅ DNI 2: {res2}")
+        else: st.toast(f"❌ No se encontró DNI 2")
+    if not doc1 and not doc2: st.toast("⚠️ Escribe DNI 1 o DNI 2")
 
 def agregar_click():
-    if not st.session_state.w_nombre: st.toast("Falta ATT 1"); return
-    b = st.session_state.w_bulto; t = st.session_state.w_total
+    if not st.session_state.w_nombre: st.toast("⚠️ Falta ATT 1"); return
+    b = int(st.session_state.w_bulto)
+    t = int(st.session_state.w_total)
+    if b > t: st.toast("⚠️ Bulto inicio no puede ser mayor que Total"); return
+    
     for i in range(b, t+1):
         st.session_state.data.append({
             "DESTINO": st.session_state.w_destino, "BULTOS": f"{i}/{t}",
@@ -99,17 +82,19 @@ def agregar_click():
     st.session_state.w_dni=""; st.session_state.w_nombre=""; st.session_state.w_factura=""
     st.session_state.w_nombre2=""; st.session_state.w_dni2=""; st.session_state.w_celular=""
     st.session_state.w_bulto=1; st.session_state.w_total=1
+    st.toast("📦 Bultos agregados a la lista")
 
 def footer_soporte():
     st.markdown("""<div style="position:fixed; bottom:0; left:0; width:100%; background:#002244; padding:8px 0; text-align:center; z-index:999;">
     <p style="margin:0; color:#99ccff; font-size:11px; font-weight:bold;">Soporte Técnico Soporte.DramirenG:</p>
     <p style="margin:0; color:white; font-size:11px;">📞 959237626 | ✉️ Soporte.DramirenG@hotmail.com</p></div><div style="height:70px;"></div>""", unsafe_allow_html=True)
 
+# --- VISTA DE LOGIN ---
 if not st.session_state.logged:
     st.markdown("""
     <style>
     .stApp{background:#eef1f5!important;}
-    #MainMenu, footer, header{visibility:hidden;}
+    [data-testid="stHeader"] { visibility: hidden; }
     .login-card{
         background:white; border-radius:12px; 
         box-shadow:0 6px 25px rgba(0,0,0,0.15);
@@ -118,7 +103,6 @@ if not st.session_state.logged:
     }
     .login-header{padding:16px 22px; font-weight:700; font-size:18px; color:#1f2937; border-bottom:1px solid #e5e7eb;}
     .login-body{padding:18px 22px 14px 22px;}
-    /* INPUTS COMO TU FOTO */
     div[data-testid="stTextInput"]{position:relative; margin-bottom:2px;}
     div[data-testid="stTextInput"] label p{font-size:13px!important; font-weight:600!important; color:#111827!important; margin-bottom:4px!important;}
     div[data-testid="stTextInput"] input{
@@ -128,20 +112,7 @@ if not st.session_state.logged:
         font-size:14px!important;
     }
     div[data-testid="stTextInput"] input:focus{border-color:#93c5fd!important; box-shadow:0 0 0 2px rgba(147,197,253,0.3)!important;}
-    /* ICONO GRIS IZQUIERDA */
-    div[data-testid="stTextInput"]:nth-of-type(1) > div:before{
-        content:'👤'; position:absolute; left:1px; top:25px; z-index:9;
-        background:#e5e7eb; width:36px; height:40px; display:flex; align-items:center; justify-content:center;
-        border-radius:7px 0 0 7px; border-right:1px solid #d1d5db; font-size:14px;
-        line-height:40px; text-align:center;
-    }
-    div[data-testid="stTextInput"]:nth-of-type(2) > div:before{
-        content:'🔒'; position:absolute; left:1px; top:25px; z-index:9;
-        background:#e5e7eb; width:36px; height:40px; display:flex; align-items:center; justify-content:center;
-        border-radius:7px 0 0 7px; border-right:1px solid #d1d5db; font-size:14px;
-        line-height:40px; text-align:center;
-    }
-    /* BOTON VERDE ACEPTAR */
+    
     div[data-testid="stButton"] button[kind="primary"]{
         background:#4CB978!important; color:white!important; border:0!important;
         border-radius:8px!important; height:42px!important; font-weight:700!important; font-size:15px!important;
@@ -184,7 +155,7 @@ if not st.session_state.logged:
     footer_soporte()
     st.stop()
 
-# APP PRINCIPAL
+# --- APP PRINCIPAL ---
 st.markdown("""
 <style>
 .stApp{background:#ffffff!important;}
@@ -201,147 +172,160 @@ div[data-testid="stFileUploader"] button{background:#FDE047!important; color:#00
 </style>
 """, unsafe_allow_html=True)
 
-col_titulo, col_imp, col_limpiar, col_logout = st.columns([4.2, 1.4, 1.4, 1.4])
-with col_titulo: st.markdown("<h1 style='margin:0; color:#111827;'>Etiquetas <span style='color:#ff7a5c'>PRO</span></h1>", unsafe_allow_html=True)
-with col_imp:
-    if st.button("🖨️ Imprimir", use_container_width=True, type="primary"):
-        if st.session_state.data: st.session_state.print_now=True
-        else: st.toast("Agrega bultos")
-with col_limpiar:
-    if st.button("🗑️ Limpiar Lista", use_container_width=True): st.session_state.data=[]; st.session_state.print_now=False; st.rerun()
-with col_logout:
-    if st.button("🚪 Cerrar sesión", use_container_width=True): st.session_state.logged=False; st.rerun()
-
-with st.sidebar:
-    st.markdown("### ⚙️ Configuración")
-    st.markdown("<p style='font-size:11px; font-weight:800; margin:0;'>FORMATO</p>", unsafe_allow_html=True)
-    formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","A4 HORIZONTAL - 2 POR HOJA","TÉRMICA 100X150"], label_visibility="collapsed")
-    st.markdown("<p style='font-size:11px; font-weight:800; margin:10px 0 2px 0;'>🔑 API DNI/RUC</p>", unsafe_allow_html=True)
-    st.text_input("TOKEN API", type="password", placeholder="Token opcional - funciona sin token", key="api_token_input", label_visibility="collapsed")
-    st.markdown("<p style='font-size:11px; font-weight:800; margin:12px 0 2px 0;'>TU LOGO DE TU EMPRESA (arriba derecha)</p>", unsafe_allow_html=True)
-    logo_empresa=st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="logo_emp", label_visibility="collapsed")
-    st.markdown("<p style='font-size:11px; font-weight:800; margin:8px 0 2px 0;'>LOGO DE MARCAS ABAJO (Opcional)</p>", unsafe_allow_html=True)
-    logo_marcas=st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="logo_mar", label_visibility="collapsed")
-
-PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","LIMA - LIMA","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA"])
-
-st.markdown("<h3 style='color:#111827; margin-top:15px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
-c1,c2,c3,c4=st.columns([1.1,1.9,1.1,0.6])
-with c1: st.text_input("DNI/RUC 1", key="w_dni", placeholder="75098930")
-with c2: st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="w_nombre")
-with c3: st.text_input("N° FACTURA / GUIA", key="w_factura", placeholder="F001-XXXXX")
-with c4:
-    st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
-    st.button("🔍 Buscar (DNI 1 y 2)", use_container_width=True, type="primary", on_click=buscar_click)
-c5,c6,c7=st.columns([2,1.2,1])
-with c5: st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="w_nombre2")
-with c6: st.text_input("DNI 2", key="w_dni2")
-with c7: st.text_input("CELULAR", key="w_celular")
-c8,c9,c10,c11=st.columns([1.6,0.6,0.6,0.7])
-with c8: st.selectbox("DESTINO", PROVINCIAS_PERU, key="w_destino")
-with c9: st.number_input("BULTO INICIO", min_value=1, step=1, key="w_bulto")
-with c10: st.number_input("TOTAL", min_value=1, step=1, key="w_total")
-with c11:
-    st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
-    st.button("➕ Agregar", use_container_width=True, type="primary", on_click=agregar_click)
-
 def generar_pdf_bytes(logo_emp, logo_mar, formato_sel):
-    is_horizontal = "HORIZONTAL" in formato_sel
-    pagesize = landscape(A4) if is_horizontal else A4
-    buffer=io.BytesIO()
-    c=canvas.Canvas(buffer, pagesize=pagesize)
-    w,h=pagesize
-    items = 2 if is_horizontal else 4
-    lh = h/items
+    buffer = io.BytesIO()
+    
+    # Evaluar formato de hoja
+    if "TÉRMICA" in formato_sel:
+        # 100mm x 150mm aproximado en puntos ReportLab (1 mm = 2.83465 pt)
+        pagesize = (283, 425) 
+        items_por_pagina = 1
+    elif "HORIZONTAL" in formato_sel:
+        pagesize = landscape(A4)
+        items_por_pagina = 2
+    else:
+        pagesize = A4
+        items_por_pagina = 4
 
-    for idx,row in enumerate(st.session_state.data):
-        pos=idx%items
-        y_top=h-(pos*lh)
+    w, h = pagesize
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    lh = h / items_por_pagina
+
+    for idx, row in enumerate(st.session_state.data):
+        pos = idx % items_por_pagina
+        y_top = h - (pos * lh)
         
-        # BORDE
-        c.setStrokeColorRGB(0,0,0)
-        c.setLineWidth(1.8)
-        c.rect(10, y_top-lh+10, w-20, lh-20)
+        # Dibujar bordes de etiqueta
+        c.setStrokeColorRGB(0, 0, 0)
+        c.setLineWidth(2)
+        c.rect(15, y_top - lh + 15, w - 30, lh - 30)
 
-        # 1. DESTINO MAS GRANDE
-        c.setFont("Helvetica-Bold", 26)
-        c.drawString(22, y_top-38, f"{row['DESTINO'].split('-')[-1].strip()}")
+        # 1. Cabecera - Destino Principal y Bultos
+        c.setFont("Helvetica-Bold", 24 if "TÉRMICA" in formato_sel else 28)
+        ciudad_destino = row['DESTINO'].split('-')[-1].strip()
+        c.drawString(30, y_top - 45, f"DESTINO: {ciudad_destino}")
         
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(w/2-15, y_top-38, f"({row['BULTOS']})")
+        c.drawRightString(w - 30, y_top - 45, f"BULTOS: {row['BULTOS']}")
         
-        c.setLineWidth(1.2)
-        c.line(15, y_top-50, w-15, y_top-50)
+        c.setLineWidth(1.5)
+        c.line(20, y_top - 60, w - 20, y_top - 60)
 
-        # 2. LETRA MAS GRANDE Y NEGRITA
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(20, y_top-72, f"ATT: {row['ATT 1']}")
+                # =====================================================================
+        # 2. INFORMACIÓN DEL REMITENTE / CLIENTE (BLOQUE RESTAURADO)
+        # =====================================================================
+        c.setFont("Helvetica-Bold", 13)
+        c.drawString(30, y_top - 85, f"ATT 1: {row['ATT 1']}")
         
-        c.setFont("Helvetica-Bold", 11)
-        c.drawString(20, y_top-90, f"DNI/RUC: {row['DNI 1']} | FACTURA: {row['FACTURA']}")
+        c.setFont("Helvetica", 11)
+        c.drawString(30, y_top - 105, f"DNI/RUC: {row['DNI 1']}    |    DOC: {row['FACTURA']}")
 
+        # Datos Opcionales (ATT 2) y Celular
         if row['ATT 2']:
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(20, y_top-108, f"ATT 2: {row['ATT 2']} - DNI 2: {row['DNI 2']}")
             c.setFont("Helvetica-Bold", 12)
-            c.drawString(20, y_top-126, f"CELULAR: {row['CELULAR']}")
+            c.drawString(30, y_top - 130, f"ATT 2: {row['ATT 2']}")
+            c.setFont("Helvetica", 11)
+            c.drawString(30, y_top - 150, f"DNI 2: {row['DNI 2']}    |    CEL: {row['CELULAR']}")
+            y_control_logos = y_top - 160  # Coordenada base para logos si hay ATT 2
         else:
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(20, y_top-108, f"CELULAR: {row['CELULAR']}")
+            c.setFont("Helvetica", 11)
+            c.drawString(30, y_top - 130, f"CELULAR: {row['CELULAR'] if row['CELULAR'] else 'S/N'}")
+            y_control_logos = y_top - 140  # Coordenada base para logos si NO hay ATT 2
 
-        # 3. LOGO 1 ARRIBA DERECHA - MAS GRANDE (como tu marca rosada)
-        if logo_emp is not None:
-            try:
-                logo_emp.seek(0)
-                im=Image.open(logo_emp).convert("RGBA")
-                b=io.BytesIO()
-                im.save(b,format='PNG')
-                b.seek(0)
-                # ANTES 85x65 -> AHORA 135x95 MUCHO MAS GRANDE
-                c.drawImage(ImageReader(b), w-155, y_top-120, width=135, height=95, preserveAspectRatio=True, mask='auto')
-            except: pass
-
-        # 4. QR MAS GRANDE - ABAJO DERECHA
+        # --- GENERACIÓN AUTOMÁTICA DE CÓDIGO QR ---
         try:
-            qr=qrcode.make(f"{row['DESTINO']}-{row['BULTOS']}-{row['DNI 1']}")
-            qb=io.BytesIO()
-            qr.save(qb,format='PNG')
-            qb.seek(0)
-            # ANTES 45x45 -> AHORA 75x75
-            c.drawImage(ImageReader(qb), w-95, y_top-lh+18, width=75, height=75)
-        except: pass
+            # Creamos un texto compacto para el QR con los datos esenciales del bulto
+            qr_text = f"DESTINO: {ciudad_destino}\nBULTO: {row['BULTOS']}\nATT: {row['ATT 1']}\nDOC: {row['FACTURA']}"
+            qr = qrcode.QRCode(version=1, box_size=2, border=1)
+            qr.add_data(qr_text)
+            qr.make(fit=True)
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Guardamos el QR generado en memoria para ReportLab
+            qr_buffer = io.BytesIO()
+            qr_img.save(qr_buffer, format="PNG")
+            qr_buffer.seek(0)
+            
+            # Dibujamos el QR en la parte inferior izquierda de la etiqueta
+            c.drawImage(ImageReader(qr_buffer), 30, y_top - lh + 25, width=55, height=55)
+        except Exception as e:
+            pass # Si falla la generación del QR, la etiqueta se sigue procesando normalmente
 
-        # 5. LOGO 2 ABAJO - MARCAS MAS GRANDE Y LARGO
-        if logo_mar is not None:
+        # --- RENDERIZADO SEGURO DE LOGOS (EMPRESA Y MARCAS) ---
+        # Logo de la Empresa (Arriba a la derecha del bloque inferior)
+        if logo_emp:
             try:
-                logo_mar.seek(0)
-                im2=Image.open(logo_mar).convert("RGBA")
-                bm=io.BytesIO()
-                im2.save(bm,format='PNG')
-                bm.seek(0)
-                # ANTES 280x18 -> AHORA 400x35 MAS GRANDE
-                c.drawImage(ImageReader(bm), 20, y_top-lh+20, width=400, height=35, preserveAspectRatio=True, mask='auto')
-            except: pass
+                img_emp = Image.open(logo_emp)
+                c.drawImage(ImageReader(img_emp), w - 130, y_top - 120, width=95, height=45, preserveAspectRatio=True, mask='auto')
+            except: 
+                pass
 
-        if pos==items-1:
+        # Logo de Marcas (Abajo a la derecha del bloque inferior)
+        if logo_mar:
+            try:
+                img_mar = Image.open(logo_mar)
+                c.drawImage(ImageReader(img_mar), w - 130, y_top - lh + 25, width=95, height=40, preserveAspectRatio=True, mask='auto')
+            except: 
+                pass
+
+        # Control estructural de saltos de página nativos de ReportLab
+        if pos == items_por_pagina - 1 and idx < len(st.session_state.data) - 1:
             c.showPage()
+        elif "TÉRMICA" in formato_sel and idx < len(st.session_state.data) - 1:
+            c.showPage()
+
     c.save()
     buffer.seek(0)
     return buffer.getvalue()
+# =====================================================================
+# --- PANEL DE ACCIÓN: PROCESAMIENTO, IMPRESIÓN Y VISTA DE BULTOS ---
+# =====================================================================
 
 if st.session_state.print_now and st.session_state.data:
     pdf_bytes = generar_pdf_bytes(logo_empresa, logo_marcas, formato)
     if pdf_bytes:
         st.success(f"✅ PDF Generado - {len(st.session_state.data)} etiquetas")
-        c1,c2 = st.columns(2)
-        with c1: st.download_button("📥 Descargar PDF", data=pdf_bytes, file_name="etiquetas.pdf", mime="application/pdf", use_container_width=True, type="primary")
+        c1, c2 = st.columns(2)
+        
+        with c1: 
+            st.download_button(
+                "📥 Descargar PDF", 
+                data=pdf_bytes, 
+                file_name="etiquetas.pdf", 
+                mime="application/pdf", 
+                use_container_width=True, 
+                type="primary"
+            )
+            
         with c2:
+            # Codificación limpia a Base64 para el script de auto-impresión
             b64 = base64.b64encode(pdf_bytes).decode()
-            st.components.v1.html(f"""<button onclick="var w=window.open(); w.document.write('<iframe src=data:application/pdf;base64,{b64} style=width:100%;height:100%><\\/iframe>'); w.document.close(); w.focus(); w.print();" style="width:100%;height:46px;background:#000;color:white;border-radius:10px;font-weight:bold;">🖨️ Imprimir Ahora</button>""", height=60)
-    st.session_state.print_now=False
+            
+            # Botón nativo HTML + JS inyectado de forma segura en Streamlit
+            st.components.v1.html(f"""
+                <button onclick="var w=window.open(); w.document.write('<iframe src=\\'data:application/pdf;base64,{b64}\\' style=\\'width:100%;height:100%;border:none;\\'><\\/iframe>'); setTimeout(function(){{ w.focus(); w.print(); }}, 500);" 
+                        style="width:100%; height:46px; background:#4CB978; color:white; border:none; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; transition: 0.3s;">
+                    🖨️ Imprimir Ahora Directo
+                </button>
+            """, height=60)
+            
+    # Apagamos el flag de impresión de forma segura para el próximo clic
+    st.session_state.print_now = False
 
+# --- PREVISUALIZACIÓN DE LA TABLA DE BULTOS EN COLA ---
+st.markdown("<br>", unsafe_allow_html=True)
 if st.session_state.data:
-    st.markdown(f"<div style='background:white; border:1.5px solid #111827; padding:10px; border-radius:10px;'><b style='color:#111827;'>📦 BULTOS - {len(st.session_state.data)} etiquetas | {formato}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"""
+        <div style='background:white; border:2px solid #000000; padding:12px; border-radius:10px; margin-bottom:10px;'>
+            <b style='color:#000000; font-size:15px;'>📦 BULTOS EN COLA - {len(st.session_state.data)} etiquetas creadas | Modo: {formato}</b>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Renderizado del DataFrame ocultando el index para una visualización limpia
     st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
-else: st.info("Aún no hay bultos - agrega clientes arriba")
+else: 
+    st.info("💡 Aún no hay bultos registrados. Completa los datos del cliente arriba y haz clic en '➕ Agregar'.")
+
+# Pie de página técnico siempre visible al fondo
 footer_soporte()
+
