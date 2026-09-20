@@ -46,13 +46,25 @@ def buscar_dni_ruc(doc, token):
     return None
 
 def buscar_click():
-    doc = st.session_state.w_dni.strip()
     token = st.session_state.api_token_input
-    if not doc: st.toast("Escribe DNI/RUC"); return
-    res = buscar_dni_ruc(doc, token)
-    if res: st.session_state.w_nombre = res; st.toast(f"Encontrado: {res}")
-    else: st.toast("No encontrado, escribe manual")
-
+    # BUSCAR DNI 1 -> ATT 1
+    doc1 = st.session_state.w_dni.strip()
+    if doc1:
+        res1 = buscar_dni_ruc(doc1, token)
+        if res1: 
+            st.session_state.w_nombre = res1
+            st.toast(f"DNI 1: {res1}")
+    
+    # BUSCAR DNI 2 -> ATT 2 CON EL MISMO BOTON
+    doc2 = st.session_state.w_dni2.strip()
+    if doc2:
+        res2 = buscar_dni_ruc(doc2, token)
+        if res2:
+            st.session_state.w_nombre2 = res2
+            st.toast(f"DNI 2: {res2}")
+    
+    if not doc1 and not doc2:
+        st.toast("Escribe DNI 1 o DNI 2")
 def agregar_click():
     if not st.session_state.w_nombre: st.toast("Falta ATT 1"); return
     b = st.session_state.w_bulto
@@ -91,15 +103,41 @@ if not st.session_state.logged:
 st.markdown("""
 <style>
 .stApp{background:#f8f9fb!important;}
-section[data-testid="stSidebar"]{background:white!important; padding-top:10px!important;}
-div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p{color:#111827!important; font-weight:800!important; font-size:11px!important;}
-div[data-testid="stTextInput"] input{background:white!important; color:#111827!important; border:1.5px solid #d1d5db!important; border-radius:10px!important; height:44px!important;}
-div[data-baseweb="select"] > div{background:white!important; border:1.5px solid #d1d5db!important; color:#111827!important;}
-div[data-baseweb="select"] span{color:#111827!important;}
-div[data-testid="stNumberInput"] input{background:white!important; color:#111827!important;}
-/* TABLA BLANCA NO NEGRA */
-div[data-testid="stDataFrame"]{background:white!important;}
-div[data-testid="stDataFrame"] div{color:#111827!important;}
+section[data-testid="stSidebar"]{background:#ffffff!important;}
+section[data-testid="stSidebar"] *{color:#111827!important;}
+
+/* LABELS NEGROS BIEN VISIBLES */
+div[data-testid="stTextInput"] label p, 
+div[data-testid="stSelectbox"] label p, 
+div[data-testid="stNumberInput"] label p {
+    color:#000000!important; font-weight:900!important; font-size:13px!important; opacity:1!important;
+}
+h3{color:#000000!important;}
+
+/* CAJAS BLANCAS CON BORDE NEGRO Y LETRA NEGRA */
+div[data-testid="stTextInput"] input{
+    background:white!important; color:#000000!important; 
+    border:2px solid #000000!important; border-radius:10px!important; 
+    height:46px!important; font-weight:700!important;
+}
+div[data-baseweb="select"] > div{
+    background:white!important; border:2px solid #000000!important; color:#000000!important;
+}
+div[data-baseweb="select"] span{color:#000000!important; font-weight:700!important; background:white!important;}
+div[data-baseweb="select"] div{background:white!important;}
+div[data-testid="stNumberInput"] input{
+    background:white!important; color:#000000!important; border:2px solid #000000!important; font-weight:700!important;
+}
+div[data-testid="stNumberInput"] button{background:#000000!important;}
+div[data-testid="stNumberInput"] button svg{fill:white!important;}
+
+/* UPLOAD */
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{
+    background:#fefce8!important; border:2px solid #000000!important; border-radius:12px!important;
+}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{
+    background:#fde047!important; color:#000000!important; border:1px solid black!important; font-weight:800!important;
+}
 </style>
 """, unsafe_allow_html=True)
 
