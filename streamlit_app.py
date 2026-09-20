@@ -253,7 +253,7 @@ class MotorEtiquetasFPDF(FPDF):
 
 # --- FUNCIONES DE LÓGICA DE INTERFAZ ---
 def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
-    """ Función conectora principal corregida para agrupar múltiples bultos por hoja """
+    """ Función conectora principal corregida para imprimir 1 etiqueta por hoja en A4 Horizontal """
     pdf = MotorEtiquetasFPDF(logo_empresa, logo_marcas)
     lista_envios = []
     
@@ -272,11 +272,12 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
             "celular": row["CELULAR"]
         })
 
-    # Procesar distribución de páginas e inyección gráfica CORREGIDA
+    # Procesar distribución de páginas e inyección gráfica
     if "HORIZONTAL" in formato_seleccionado:  
+        # --- CORREGIDO: 1 ETIQUETA MAXI POR CADA HOJA A4 HORIZONTAL ---
         for datos in lista_envios:
             pdf.add_page(orientation='L', format='A4') 
-            pdf.dibujar_etiqueta_maxi(0, 0, datos)       
+            pdf.dibujar_etiqueta_maxi(0, 0, datos) # Ocupa el 100% de la hoja actual      
             
     elif "TÉRMICA" in formato_seleccionado:  
         pdf.set_auto_page_break(auto=False, margin=0)
@@ -284,14 +285,10 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
             pdf.add_page(orientation='P', format=(100, 150))
             pdf.dibujar_etiqueta_termica(0, 0, datos)
             
-    else:  # --- A4 VERTICAL ESTÁNDAR (4 BULTOS POR HOJA) CORREGIDO ---
-        # Posiciones exactas en milímetros (X, Y) para las 4 ranuras de la hoja A4
+    else:  # A4 VERTICAL ESTÁNDAR (4 BULTOS POR HOJA)
         posiciones_a4 = [(8, 5), (8, 75), (8, 145), (8, 215)]
-        
         for i, datos in enumerate(lista_envios):
             idx_hoja = i % 4
-            
-            # SOLO crea una página nueva al inicio (bulto 0) o cada vez que completamos 4 bultos
             if idx_hoja == 0:
                 pdf.add_page(orientation='P', format='A4')
                 
