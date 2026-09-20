@@ -97,41 +97,46 @@ with c8:
 # FUNCION UNICA CON MAS MARGEN - COMO TU FOTO LIMA
 def dibujar(x,y,d,w,h,pdf):
     pdf.set_draw_color(0,0,0)
-    pdf.set_line_width(0.8 if h<100 else 1.2)
+    pdf.set_line_width(0.9 if h<100 else 1.2)
     pdf.rect(x,y,w,h)
-    pdf.line(x, y+20, x+w, y+20) # linea divisoria
+    pdf.line(x, y+22, x+w, y+22)
 
-    pdf.set_font("Helvetica","B", 26 if h<100 else 48)
-    pdf.set_xy(x+8, y+4) # margen izq +8
-    pdf.cell(85, 12, d['destino'], align='L')
+    # HEADER - AREQUIPA + (1/4)
+    pdf.set_font("Helvetica","B", 32 if h<100 else 55) # LETRA MAS GRANDE
+    pdf.set_xy(x+6, y+4)
+    pdf.cell(95, 13, d['destino'], align='L')
 
-    pdf.set_font("Helvetica","B", 14 if h<100 else 26)
-    pdf.set_xy(x+100, y+5) # (1/4) separado del DG
-    pdf.cell(35, 10, f"({d['b1']}/{d['b2']})", align='C')
+    pdf.set_font("Helvetica","B", 18 if h<100 else 30)
+    pdf.set_xy(x+95, y+6)
+    pdf.cell(35, 11, f"({d['b1']}/{d['b2']})", align='C')
 
+    # LOGO DG ARRIBA DEL QR - A LA DERECHA GRANDE
     l1="logo_dg.png" if os.path.exists("logo_dg.png") else "logo_imagen1.png" if os.path.exists("logo_imagen1.png") else None
     if l1:
-        pdf.image(l1, x+w-33, y+3, 26, 11) # margen derecho
+        # ARRIBA DEL QR, lado derecho, como tu foto AREQUIPA
+        pdf.image(l1, x+w-48, y+2, 44, 28 if h<100 else 50)
 
-    # deja columna derecha vacia w-70
-    pdf.set_font("Arial","B",10 if h<100 else 18)
-    pdf.set_xy(x+8, y+23)
-    pdf.cell(w-70, 5, f"ATT: {d['nombre'].upper()}")
+    # CUERPO - deja espacio a la derecha para el DG
+    pdf.set_font("Arial","B", 12 if h<100 else 20)
+    pdf.set_xy(x+6, y+26)
+    pdf.cell(w-55, 6, f"ATT: {d['nombre'].upper()}")
 
-    pdf.set_xy(x+8, y+29)
-    pdf.set_font("Arial","",8 if h<100 else 12)
-    pdf.cell(w-70, 4, f"DNI/RUC: {d['dni']} | FACTURA: {d['factura'].upper()}")
+    pdf.set_xy(x+6, y+33)
+    pdf.set_font("Arial","", 10 if h<100 else 14)
+    pdf.cell(w-55, 5, f"DNI/RUC: {d['dni']}  |  FACTURA: {d['factura'].upper()}")
 
-    pdf.set_xy(x+8, y+35)
-    pdf.set_font("Arial","B",9 if h<100 else 14)
-    pdf.cell(w-70, 4, f"CELULAR: {d['celular']}")
+    pdf.set_xy(x+6, y+40)
+    pdf.set_font("Arial","B", 11 if h<100 else 16)
+    pdf.cell(w-55, 5, f"CELULAR: {d['celular']}")
 
+    # MARCAS ABAJO
     l2="marcas.png" if os.path.exists("marcas.png") else "logo_imagen2.png" if os.path.exists("logo_imagen2.png") else None
     if l2:
-        pdf.image(l2, x+8, y+h-13, 105, 8) # margen inferior
+        pdf.image(l2, x+6, y+h-14, 120, 9)
 
+    # QR ABAJO DEL DG
     qr=qrcode.make(f"{d['nombre']}|{d['destino']}|{d['dni']}"); qr.save("qr.png")
-    pdf.image("qr.png", x+w-20, y+h-16, 12, 12) # QR con margen
+    pdf.image("qr.png", x+w-20, y+h-16, 13, 13)
 
 # GENERAR PDF
 if st.session_state.lista:
