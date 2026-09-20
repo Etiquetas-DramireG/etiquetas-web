@@ -303,44 +303,46 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
 
 # PEGA ESTO JUSTO DEBAJO DE TUS IMPORTS:
 
-def buscar_dni_ruc(doc, token=None):
+def buscar_dni_ruc(doc):
     doc = str(doc).strip()
     if not doc: return None
 
-    # Para DNIs con 0 al inicio, prueba las 2 versiones
-    intentos_doc = [doc]
-    if doc.startswith("0"):
-        intentos_doc.append(doc.lstrip("0")) # 3649473
-    if len(doc) == 7:
-        intentos_doc.append("0"+doc) # por si escribe 3649473
+    # LEER EL TOKEN DE TU INPUT DE LA FOTO
+    token = st.session_state.get("api_token_input", "").strip()
 
-    # 1. PRIMERO PRUEBA CON TU TOKEN (apiperu.dev) - ese si tiene DNIs con 0
-    token = st.secrets.get("API_TOKEN", "") if hasattr(st, 'secrets') else ""
+    intentos = [doc]
+    if doc.startswith("0"):
+        intentos.append(doc.lstrip("0"))
+
+    # 1. Si escribió token, usa apiperu.dev (SI encuentra 03649473)
     if token:
-        for d in intentos_doc:
+        for d in intentos:
             try:
-                url = "https://apiperu.dev/api/dni"
-                headers = {"Authorization": f"Bearer {token}"}
-                r = requests.post(url, json={"dni": d.zfill(8)}, headers=headers, timeout=8)
+                r = requests.post(
+                    "https://apiperu.dev/api/dni",
+                    json={"dni": d.zfill(8)},
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=8
+                )
                 if r.status_code == 200:
                     data = r.json().get("data", {})
                     nombre = f"{data.get('nombres','')} {data.get('apellido_paterno','')} {data.get('apellido_materno','')}".strip()
                     if len(nombre) > 3:
-                        return nombre
-            except: pass
+                        return nombre.upper()
+            except:
+                pass
 
-    # 2. SI NO HAY TOKEN, PRUEBA GRATIS
-    for d in intentos_doc:
-        for url in [f"https://api.apis.net.pe/v1/dni?numero={d}", f"https://dniruc.apisperu.com/api/v1/dni/{d}"]:
-            try:
-                r = requests.get(url, timeout=6)
-                if r.status_code == 200:
-                    j = r.json()
-                    if j.get("nombres"):
-                        return f"{j.get('nombres','')} {j.get('apellidoPaterno','')} {j.get('apellidoMaterno','')}".strip()
-            except: continue
+    # 2. Si no hay token o falló, prueba gratis
+    for d in intentos:
+        try:
+            r = requests.get(f"https://api.apis.net.pe/v1/dni?numero={d}", timeout=6)
+            if r.status_code == 200 and r.json().get("nombres"):
+                j = r.json()
+                return f"{j.get('nombres','')} {j.get('apellidoPaterno','')} {j.get('apellidoMaterno','')}".strip().upper()
+        except:
+            continue
     return None
-
+    
 def buscar_click():
     doc1 = st.session_state.get("w_dni","").strip()
     doc2 = st.session_state.get("w_dni2","").strip()
