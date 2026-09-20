@@ -324,18 +324,34 @@ def buscar_dni_ruc(doc, token):
     return None
 
 def buscar_click():
-    token = st.session_state.api_token_input
-    doc1 = st.session_state.w_dni.strip()
+    # Extraemos el token que el operario escribió en la barra de configuración
+    token = st.session_state.get("api_token_input", "").strip()
+    
+    doc1 = st.session_state.get("w_dni", "").strip()
+    doc2 = st.session_state.get("w_dni2", "").strip()
+    
+    if not doc1 and not doc2:
+        st.toast("⚠️ Escribe al menos un DNI 1 o DNI 2 para buscar")
+        return
+
+    # Si hay un DNI 1 escrito, lo busca y autocompleta el Nombre 1
     if doc1:
         res1 = buscar_dni_ruc(doc1, token)
-        if res1: st.session_state.w_nombre = res1; st.toast(f"✅ DNI 1: {res1}")
-        else: st.toast("❌ No encontrado DNI 1")
-    doc2 = st.session_state.w_dni2.strip()
+        if res1: 
+            st.session_state.w_nombre = res1
+            st.toast(f"✅ DNI 1 encontrado: {res1}")
+        else: 
+            st.toast(f"❌ No se encontró el DNI 1: {doc1}")
+            
+    # Si de forma opcional también hay un DNI 2 escrito, lo busca y autocompleta el Nombre 2
     if doc2:
         res2 = buscar_dni_ruc(doc2, token)
-        if res2: st.session_state.w_nombre2 = res2; st.toast(f"✅ DNI 2: {res2}")
-        else: st.toast("❌ No encontrado DNI 2")
-
+        if res2: 
+            st.session_state.w_nombre2 = res2
+            st.toast(f"✅ DNI 2 encontrado: {res2}")
+        else: 
+            st.toast(f"❌ No se encontró el DNI 2: {doc2}")
+            
 def agregar_click():
     if not st.session_state.w_nombre: 
         st.toast("⚠️ Falta ATT 1")
