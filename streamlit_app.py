@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import qrcode, io, base64
-from reportlab.lib.pagesizes import A4
+import qrcode, io, base64, requests
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from PIL import Image
@@ -10,8 +10,6 @@ st.set_page_config(page_title="Etiquetas PRO", layout="wide", page_icon="🏷️
 if 'logged' not in st.session_state: st.session_state.logged=False
 if 'data' not in st.session_state: st.session_state.data=[]
 if 'print_now' not in st.session_state: st.session_state.print_now=False
-
-# INICIALIZAR BIEN (TEXTO VACIO, NUMEROS EN 1)
 if "dni" not in st.session_state: st.session_state.dni=""
 if "nombre" not in st.session_state: st.session_state.nombre=""
 if "factura" not in st.session_state: st.session_state.factura=""
@@ -26,6 +24,17 @@ def footer_soporte():
     <p style="margin:0; color:#99ccff; font-size:11px; font-weight:bold;">Soporte Técnico de Control Soporte.DramirenG:</p>
     <p style="margin:0; color:white; font-size:11px;">📞 Celular: 959237626 | ✉️ Correo: Soporte.DramirenG@hotmail.com</p></div><div style="height:80px;"></div>""", unsafe_allow_html=True)
 
+def buscar_dni_ruc_api(doc, token):
+    try:
+        if len(doc)==8:
+            r=requests.get(f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=10)
+            if r.status_code==200: d=r.json(); return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+        elif len(doc)==11:
+            r=requests.get(f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}", headers={"Authorization":f"Bearer {token}"}, timeout=10)
+            if r.status_code==200: d=r.json(); return d.get('nombre','') or d.get('razonSocial','')
+    except: return None
+    return None
+
 if not st.session_state.logged:
     st.markdown("<style>.stApp{background:#f2f3f7!important;} div[data-testid='stTextInput'] input{background:white!important; color:#111827!important; border:2px solid #111827!important; border-radius:12px!important; height:50px!important;} div[data-testid='stTextInput'] label p{color:#111827!important; font-weight:800!important;}</style>", unsafe_allow_html=True)
     c1,c2,c3=st.columns([1,1.2,1])
@@ -37,17 +46,26 @@ if not st.session_state.logged:
             else: st.error("Usuario o clave incorrecta")
     footer_soporte(); st.stop()
 
+# CSS QUE ARREGLA TODO LO NEGRO DE TU FOTO
 st.markdown("""
 <style>
 .stApp{background:#f8f9fb!important;}
-section[data-testid="stSidebar"]{background:white!important;}
+section[data-testid="stSidebar"]{background:white!important; border-right:1px solid #e5e7eb!important;}
 section[data-testid="stSidebar"] *{color:#111827!important;}
 div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p{color:#111827!important; font-weight:800!important; font-size:11px!important;}
 div[data-testid="stTextInput"] input{background:white!important; color:#111827!important; border:1.5px solid #d1d5db!important; border-radius:10px!important; height:44px!important;}
-div[data-baseweb="select"] > div{background:white!important; border:1.5px solid #d1d5db!important; border-radius:10px!important;}
+/* ARREGLA DESTINO Y NUMEROS NEGROS */
+div[data-baseweb="select"] > div{background:white!important; border:1.5px solid #d1d5db!important; color:#111827!important;}
+div[data-baseweb="select"] span{color:#111827!important; font-weight:600!important;}
+div[data-testid="stNumberInput"] input{background:white!important; color:#111827!important;}
+div[data-testid="stNumberInput"] button{background:white!important; border:1px solid #d1d5db!important;}
+div[data-testid="stNumberInput"] button svg{fill:#111827!important;}
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{background:#fefce8!important; border:1.5px solid #fde68a!important; border-radius:12px!important;}
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{background:#fefce8!important; border:1px dashed #facc15!important;}
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{background:#fde047!important; color:#422006!important; border:1px solid #facc15!important; font-weight:700!important;}
+/* TABLA VISIBLE */
+div[data-testid="stDataFrame"]{background:white!important; border:1.5px solid #e5e7eb!important; border-radius:12px!important;}
+div[data-testid="stDataFrame"] *{color:#111827!important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -64,50 +82,71 @@ with col_logout:
 
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
-    formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","TÉRMICA 100X150"], label_visibility="collapsed")
+    formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","A4 HORIZONTAL - 2 POR HOJA","TÉRMICA 100X150"], index=0)
+    st.markdown("---")
+    st.markdown("**🔑 API DNI/RUC (apis.net.pe)**")
+    api_token=st.text_input("TOKEN API", type="password", placeholder="Pega tu token aquí")
+    st.caption("Consíguelo gratis en apis.net.pe")
+    st.markdown("---")
     st.markdown("**TU LOGO DE TU EMPRESA (arriba derecha)**")
     logo_empresa=st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="logo_emp", label_visibility="collapsed")
     st.markdown("**LOGO DE MARCAS ABAJO (Opcional)**")
     logo_marcas=st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="logo_mar", label_visibility="collapsed")
 
-PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA"])
+PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LIMA - HUACHO","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA","AMAZONAS - CHACHAPOYAS","APURIMAC - ABANCAY","AYACUCHO - AYACUCHO","HUANCAVELICA - HUANCAVELICA","HUANUCO - HUANUCO","MOQUEGUA - MOQUEGUA","PASCO - CERRO DE PASCO","SAN MARTIN - MOYOBAMBA"])
 
-st.markdown("#### 📝 Datos del cliente")
-c1,c2,c3=st.columns([1.2,2,1.2])
-with c1: dni=st.text_input("DNI/RUC 1", key="dni")
+# TITULO EN NEGRO YA NO BLANCO
+st.markdown("<h3 style='color:#111827; margin-top:20px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
+
+c1,c2,c3,c4=st.columns([1.1,1.9,1.1,0.6])
+with c1: dni=st.text_input("DNI/RUC 1", key="dni", placeholder="75098930")
 with c2: nombre=st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="nombre")
 with c3: factura=st.text_input("N° FACTURA / GUIA", key="factura", placeholder="F001-XXXXX")
+with c4: 
+    st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+    if st.button("🔍 Buscar", use_container_width=True):
+        if not api_token: st.error("Pon tu token en la barra lateral")
+        elif dni:
+            res=buscar_dni_ruc_api(dni.strip(), api_token)
+            if res: st.session_state.nombre=res; st.rerun()
+            else: st.error("No encontrado")
+        else: st.warning("Escribe DNI/RUC")
 
-c4,c5,c6=st.columns([2,1.2,1])
-with c4: nombre2=st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="nombre2")
-with c5: dni2=st.text_input("DNI 2", key="dni2")
-with c6: celular=st.text_input("CELULAR", key="celular")
+c5,c6,c7=st.columns([2,1.2,1])
+with c5: nombre2=st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="nombre2")
+with c6: dni2=st.text_input("DNI 2", key="dni2")
+with c7: celular=st.text_input("CELULAR", key="celular")
 
-c7,c8,c9=st.columns([1.5,0.6,0.6])
-with c7: destino=st.selectbox("DESTINO", PROVINCIAS_PERU)
-with c8: bulto=st.number_input("BULTO INICIO", min_value=1, step=1, key="bulto")
-with c9: total=st.number_input("TOTAL", min_value=1, step=1, key="total")
+c8,c9,c10,c11=st.columns([1.6,0.6,0.6,0.7])
+with c8: destino=st.selectbox("DESTINO (escribe para filtrar)", PROVINCIAS_PERU)
+with c9: bulto=st.number_input("BULTO INICIO", min_value=1, step=1, key="bulto")
+with c10: total=st.number_input("TOTAL", min_value=1, step=1, key="total")
+with c11:
+    st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+    if st.button("➕ Agregar", use_container_width=True, type="primary"):
+        for i in range(bulto, total+1):
+            st.session_state.data.append({"DESTINO":destino,"BULTOS":f"{i}/{total}","ATT 1":nombre,"DNI 1":dni,"FACTURA":factura,"ATT 2":nombre2,"DNI 2":dni2,"CELULAR":celular})
+        st.session_state.dni=""; st.session_state.nombre=""; st.session_state.factura=""; st.session_state.nombre2=""; st.session_state.dni2=""; st.session_state.celular=""
+        st.session_state.bulto=1; st.session_state.total=1
+        st.rerun()
 
-if st.button("➕ Agregar a la Lista", use_container_width=True, type="primary"):
-    for i in range(bulto, total+1):
-        st.session_state.data.append({"DESTINO":destino,"B1":i,"B2":total,"NOMBRE":nombre,"DNI":dni,"FACTURA":factura,"NOMBRE2":nombre2,"DNI2":dni2,"CELULAR":celular})
-    st.session_state.dni=""; st.session_state.nombre=""; st.session_state.factura=""; st.session_state.nombre2=""; st.session_state.dni2=""; st.session_state.celular=""
-    st.session_state.bulto=1; st.session_state.total=1
-    st.rerun()
-
-def generar_pdf_bytes(logo_emp, logo_mar):
-    buffer=io.BytesIO(); c=canvas.Canvas(buffer, pagesize=A4); w,h=A4; lh=h/4
+def generar_pdf_bytes(logo_emp, logo_mar, formato_sel):
+    is_horizontal = "HORIZONTAL" in formato_sel
+    pagesize = landscape(A4) if is_horizontal else A4
+    buffer=io.BytesIO(); c=canvas.Canvas(buffer, pagesize=pagesize); w,h=pagesize
+    items_por_hoja = 2 if is_horizontal else 4
+    lh = h/items_por_hoja
     for idx,row in enumerate(st.session_state.data):
-        pos=idx%4; y_top=h-(pos*lh)
+        pos=idx%items_por_hoja; y_top=h-(pos*lh)
         c.setStrokeColorRGB(0,0,0); c.setLineWidth(1.5); c.rect(10, y_top-lh+10, w-20, lh-20)
         c.setFont("Helvetica-Bold",22); c.drawString(20, y_top-35, f"{row['DESTINO'].split('-')[-1].strip()}")
-        c.setFont("Helvetica-Bold",14); c.drawString(w/2-20, y_top-35, f"({row['B1']}/{row['B2']})")
+        c.setFont("Helvetica-Bold",14); c.drawString(w/2-20, y_top-35, f"({row['BULTOS']})")
         c.line(15, y_top-45, w-115, y_top-45)
-        c.setFont("Helvetica-Bold",11); c.drawString(20, y_top-62, f"ATT: {row['NOMBRE']}")
-        c.setFont("Helvetica",9); c.drawString(20, y_top-76, f"DNI/RUC: {row['DNI']} | FACTURA: {row['FACTURA']}")
-        if row['NOMBRE2']:
-            c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-92, f"ATT 2: {row['NOMBRE2']}")
-            c.setFont("Helvetica",9); c.drawString(20, y_top-105, f"DNI 2: {row['DNI2']}")
+        c.setFont("Helvetica-Bold",11); c.drawString(20, y_top-62, f"ATT: {row['ATT 1']}")
+        c.setFont("Helvetica",9); c.drawString(20, y_top-76, f"DNI/RUC: {row['DNI 1']} | FACTURA: {row['FACTURA']}")
+        if row['ATT 2']:
+            c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-92, f"ATT 2: {row['ATT 2']}")
+            c.setFont("Helvetica",9); c.drawString(20, y_top-105, f"DNI 2: {row['DNI 2']}")
             c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-120, f"CELULAR: {row['CELULAR']}")
         else:
             c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-92, f"CELULAR: {row['CELULAR']}")
@@ -121,21 +160,22 @@ def generar_pdf_bytes(logo_emp, logo_mar):
                 im2=Image.open(logo_mar); bm=io.BytesIO(); im2.save(bm,format='PNG'); bm.seek(0)
                 c.drawImage(ImageReader(bm), 25, y_top-lh+30, width=300, height=22, preserveAspectRatio=True, mask='auto')
             except: pass
-        qr=qrcode.make(f"{row['DESTINO']}-{row['B1']}/{row['B2']}-{row['DNI']}"); qb=io.BytesIO(); qr.save(qb,format='PNG'); qb.seek(0)
+        qr=qrcode.make(f"{row['DESTINO']}-{row['BULTOS']}-{row['DNI 1']}"); qb=io.BytesIO(); qr.save(qb,format='PNG'); qb.seek(0)
         c.drawImage(ImageReader(qb), w-70, y_top-lh+18, width=50, height=50)
-        if pos==3: c.showPage()
+        if pos==items_por_hoja-1: c.showPage()
     c.save(); return buffer.getvalue()
 
 if st.session_state.print_now and st.session_state.data:
-    pdf_bytes=generar_pdf_bytes(logo_empresa, logo_marcas); b64=base64.b64encode(pdf_bytes).decode()
+    pdf_bytes=generar_pdf_bytes(logo_empresa, logo_marcas, formato); b64=base64.b64encode(pdf_bytes).decode()
     st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="650"></iframe>', unsafe_allow_html=True)
     st.components.v1.html(f"""<html><body><script>var pdfData="data:application/pdf;base64,{b64}"; var i=document.createElement('iframe'); i.style.display='none'; i.src=pdfData; document.body.appendChild(i); i.onload=function(){{setTimeout(function(){{i.contentWindow.focus(); i.contentWindow.print();}},800);}};</script></body></html>""", height=0)
     st.session_state.print_now=False
 
 if st.session_state.data:
-    st.markdown(f"<div style='background:white; border:1.5px solid #e5e7eb; padding:12px; border-radius:12px 12px 0 0;'><b style='color:#111827'>📦 BULTOS AGREGADOS - {len(st.session_state.data)} etiquetas</b></div>", unsafe_allow_html=True)
-    st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
+    st.markdown(f"<div style='background:white; border:1.5px solid #111827; padding:12px; border-radius:12px 12px 0 0;'><b style='color:#111827; font-size:14px;'>📦 BULTOS AGREGADOS - {len(st.session_state.data)} etiquetas | FORMATO: {formato}</b></div>", unsafe_allow_html=True)
+    df=pd.DataFrame(st.session_state.data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 else:
-    st.info("Aún no hay bultos")
+    st.info("Aún no hay bultos - agrega clientes arriba")
 
 footer_soporte()
