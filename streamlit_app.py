@@ -4,6 +4,7 @@ import qrcode, io, base64
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from PIL import Image
 
 st.set_page_config(page_title="DramirenG PRO", layout="wide", page_icon="🏷️")
 if 'logged' not in st.session_state: st.session_state.logged = False
@@ -24,10 +25,15 @@ if not st.session_state.logged:
             if u=="admin" and p=="dramireng123": st.session_state.logged=True; st.rerun()
     footer_soporte(); st.stop()
 
-st.markdown("""<style>.stApp{background:#f8f9fb !important;} section[data-testid="stSidebar"]{background:white !important;} section[data-testid="stSidebar"] *{color:#111827 !important;}
-div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p, div[data-testid="stRadio"] label p{color:#111827 !important; font-weight:800 !important; font-size:12px !important;}
+st.markdown("""<style>
+.stApp{background:#f8f9fb !important;} 
+section[data-testid="stSidebar"]{background:white !important;} 
+section[data-testid="stSidebar"] *{color:#111827 !important;}
+div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p, div[data-testid="stRadio"] label p, div[data-testid="stFileUploader"] label p{color:#111827 !important; font-weight:800 !important; font-size:12px !important; text-transform:uppercase;}
 div[data-testid="stTextInput"] input{background:white !important; color:#111827 !important; -webkit-text-fill-color:#111827 !important; border:1.5px solid #d1d5db !important; border-radius:10px !important; height:44px !important;}
-div[data-baseweb="select"] > div{background:white !important; border:1.5px solid #d1d5db !important; border-radius:10px !important;} div[data-baseweb="select"] span{color:#111827 !important;}
+div[data-baseweb="select"] > div{background:white !important; border:1.5px solid #d1d5db !important; border-radius:10px !important;} 
+div[data-baseweb="select"] span{color:#111827 !important;}
+section[data-testid="stFileUploader"]{border: 1.5px dashed #d1d5db !important; border-radius:10px !important; padding:5px !important;}
 </style>""", unsafe_allow_html=True)
 
 col_titulo, col_imp, col_logout = st.columns([5.5, 1.5, 1.2])
@@ -39,8 +45,16 @@ with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     st.markdown("**FORMATO**")
     formato = st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA", "A4 HORIZONTAL - TODA LA HOJA", "TÉRMICA 100X150"], label_visibility="collapsed")
+    st.markdown("---")
+    st.markdown("**Logo DG arriba derecha**")
+    logo_dg = st.file_uploader("Logo DG arriba derecha", type=["png","jpg","jpeg"], label_visibility="collapsed")
+    if logo_dg: st.image(logo_dg, width=150)
+    
+    st.markdown("**Marcas abajo (Nike, Adidas, etc)**")
+    logo_marcas = st.file_uploader("Marcas abajo", type=["png","jpg","jpeg"], key="marcas", label_visibility="collapsed")
+    if logo_marcas: st.image(logo_marcas, width=150)
 
-PROVINCIAS = ["SULLANA","PIURA","PAITA","TALARA","LIMA","TRUJILLO","CHICLAYO","TUMBES"]
+PROVINCIAS = ["SULLANA","PIURA","PAITA","TALARA","LIMA","TRUJILLO","CHICLAYO","TUMBES","PISCO","AREQUIPA"]
 c1,c2 = st.columns([1,2.5])
 with c1: dni = st.text_input("DNI/RUC", value="75098930")
 with c2: nombre = st.text_input("NOMBRE", value="DAVID GRABIEL RAMIREZ NIEVES")
@@ -58,17 +72,34 @@ with b2:
         for i in range(bulto, total+1): st.session_state.data.append({"DNI/RUC":dni,"NOMBRE":nombre,"DESTINO":destino,"CELULAR":celular,"B1":i,"B2":total})
         st.rerun()
 
-def generar_pdf_bytes():
+def generar_pdf_bytes(logo_dg_file, logo_marcas_file):
     buffer = io.BytesIO(); c = canvas.Canvas(buffer, pagesize=A4); w,h = A4; lh = h/4
     for idx, row in enumerate(st.session_state.data):
         pos = idx % 4; y_top = h - (pos * lh)
-        c.rect(20, y_top-lh+10, w-40, lh-20)
+        c.setStrokeColorRGB(0.8,0.8,0.8); c.rect(20, y_top-lh+10, w-40, lh-20)
+        
+        # LOGO DG ARRIBA DERECHA
+        if logo_dg_file:
+            try:
+                img_dg = Image.open(logo_dg_file); img_dg_buffer = io.BytesIO(); img_dg.save(img_dg_buffer, format='PNG'); img_dg_buffer.seek(0)
+                c.drawImage(ImageReader(img_dg_buffer), w-110, y_top-45, width=70, height=28, preserveAspectRatio=True)
+            except: pass
+
         c.setFont("Helvetica-Bold",14); c.drawString(30,y_top-30,f"DESTINO: {row['DESTINO']}")
         c.setFont("Helvetica",10); c.drawString(30,y_top-50,f"{row['NOMBRE']}"); c.drawString(30,y_top-65,f"DNI: {row['DNI/RUC']} | CEL: {row['CELULAR']}")
         c.setFont("Helvetica-Bold",16); c.drawString(30,y_top-90,f"BULTO {row['B1']} DE {row['B2']}")
+        
         qr_img = qrcode.make(f"{row['DESTINO']}-{row['B1']}/{row['B2']}")
         qr_buffer = io.BytesIO(); qr_img.save(qr_buffer, format='PNG'); qr_buffer.seek(0)
         c.drawImage(ImageReader(qr_buffer), w-105, y_top-115, width=60, height=60)
+
+        # LOGO MARCAS ABAJO
+        if logo_marcas_file:
+            try:
+                img_m = Image.open(logo_marcas_file); img_m_buffer = io.BytesIO(); img_m.save(img_m_buffer, format='PNG'); img_m_buffer.seek(0)
+                c.drawImage(ImageReader(img_m_buffer), 30, y_top-lh+22, width=w-80, height=22, preserveAspectRatio=True)
+            except: pass
+
         if pos==3: c.showPage()
     c.save(); return buffer.getvalue()
 
@@ -76,8 +107,9 @@ if st.session_state.data:
     st.markdown("#### 📦 Bultos Agregados")
     df = pd.DataFrame(st.session_state.data)
     st.dataframe(df, use_container_width=True, hide_index=True)
+    
     if col_imp.button("🖨️ Imprimir", use_container_width=True) or st.button("🖨️ IMPRIMIR DIRECTO - 1 CLICK", type="primary", use_container_width=True):
-        pdf_bytes = generar_pdf_bytes(); b64 = base64.b64encode(pdf_bytes).decode()
+        pdf_bytes = generar_pdf_bytes(logo_dg, logo_marcas); b64 = base64.b64encode(pdf_bytes).decode()
         st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="600"></iframe>', unsafe_allow_html=True)
         st.components.v1.html(f"""<html><body><script>
             var pdfData = "data:application/pdf;base64,{b64}"; var iframe = document.createElement('iframe'); iframe.style.display='none'; iframe.src=pdfData; document.body.appendChild(iframe);
