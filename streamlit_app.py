@@ -1,7 +1,62 @@
 import streamlit as st
 from fpdf import FPDF
 import os, qrcode, requests
+st.set_page_config(page_title="DramirenG PRO", layout="wide", page_icon="🏷️")
 
+st.markdown("""
+<style>
+/* FONDO PRO */
+.stApp { background: #0e1117; }
+section[data-testid="stSidebar"] { background: #1c1f26 !important; border-right: 1px solid #2a2e39; }
+
+/* INPUTS TIPO APPLE */
+div[data-testid="stTextInput"] input, div[data-testid="stNumberInput"] input {
+    background: #262a34 !important;
+    border: 1px solid #3a3f4f !important;
+    border-radius: 10px !important;
+    color: white !important;
+    padding: 12px !important;
+}
+div[data-testid="stTextInput"] input:focus {
+    border-color: #ff9900 !important;
+    box-shadow: 0 0 0 1px #ff9900 !important;
+}
+
+/* BOTONES PRO - NARANJA DRAMIRENG */
+div[data-testid="stButton"] button {
+    background: linear-gradient(90deg, #ff9900, #ff6a00) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    height: 48px !important;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(255,153,0,0.3);
+    transition: 0.2s;
+}
+div[data-testid="stButton"] button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255,153,0,0.5);
+}
+
+/* TABLA PRO */
+div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
+
+/* TITULO */
+h1 { font-family: 'Segoe UI', sans-serif; font-weight: 800 !important; }
+
+/* RADIO */
+div[data-testid="stRadio"] { background: #262a34; padding: 15px; border-radius: 12px; }
+</style>
+""", unsafe_allow_html=True)
+
+# HEADER PRO CON LOGO
+col_logo, col_title = st.columns([1, 10])
+with col_logo:
+    if os.path.exists("logo_dg.png"):
+        st.image("logo_dg.png", width=60)
+with col_title:
+    st.markdown("<h1 style='margin:0; padding-top:5px;'>DramirenG <span style='color:#ff9900; font-weight:300;'>PRO</span> <span style='font-size:14px; background:#ff9900; color:white; padding:3px 10px; border-radius:20px; margin-left:10px;'>v2.0</span></h1><p style='color:#8b949e; margin:0;'>Sistema de Despacho Nacional</p>", unsafe_allow_html=True)
 st.set_page_config(page_title="DramirenG", layout="centered")
 if "login" not in st.session_state: st.session_state.login=False
 if "lista" not in st.session_state: st.session_state.lista=[]
