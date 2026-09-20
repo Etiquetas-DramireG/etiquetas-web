@@ -113,39 +113,69 @@ with st.sidebar:
 
 PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LIMA - HUACHO","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA"])
 
-st.markdown("<h3 style='color:#111827; margin-top:15px; margin-bottom:5px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
+# FUNCIONES PARA NO DAR ERROR DE WIDGET
+def buscar_click():
+    doc = st.session_state.w_dni.strip()
+    token = st.session_state.get("api_token_input","")
+    if not doc:
+        st.toast("Escribe DNI/RUC")
+        return
+    res = buscar_dni_ruc(doc, token)
+    if res:
+        st.session_state.w_nombre = res
+        st.toast(f"Encontrado: {res}")
+    else:
+        st.toast("No encontrado")
+
+def agregar_click():
+    b = st.session_state.w_bulto
+    t = st.session_state.w_total
+    if not st.session_state.w_nombre:
+        st.toast("Falta nombre")
+        return
+    for i in range(b, t+1):
+        st.session_state.data.append({
+            "DESTINO": st.session_state.w_destino,
+            "BULTOS": f"{i}/{t}",
+            "ATT 1": st.session_state.w_nombre,
+            "DNI 1": st.session_state.w_dni,
+            "FACTURA": st.session_state.w_factura,
+            "ATT 2": st.session_state.w_nombre2,
+            "DNI 2": st.session_state.w_dni2,
+            "CELULAR": st.session_state.w_celular
+        })
+    # LIMPIAR SIN ERROR
+    st.session_state.w_dni=""
+    st.session_state.w_nombre=""
+    st.session_state.w_factura=""
+    st.session_state.w_nombre2=""
+    st.session_state.w_dni2=""
+    st.session_state.w_celular=""
+    st.session_state.w_bulto=1
+    st.session_state.w_total=1
+
+st.markdown("<h3 style='color:#111827; margin-top:15px;'>📦 Datos del cliente</h3>", unsafe_allow_html=True)
 
 c1,c2,c3,c4=st.columns([1.1,1.9,1.1,0.6])
-with c1: dni=st.text_input("DNI/RUC 1", key="dni", placeholder="75098930")
-with c2: nombre=st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="nombre")
-with c3: factura=st.text_input("N° FACTURA / GUIA", key="factura", placeholder="F001-XXXXX")
+with c1: st.text_input("DNI/RUC 1", key="w_dni", placeholder="75098930")
+with c2: st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="w_nombre")
+with c3: st.text_input("N° FACTURA / GUIA", key="w_factura", placeholder="F001-XXXXX")
 with c4:
     st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
-    if st.button("🔍 Buscar", use_container_width=True, type="primary"):
-        if not dni.strip(): st.warning("Escribe DNI")
-        else:
-            with st.spinner("Buscando..."):
-                res=buscar_dni_ruc(dni, api_token)
-                if res: st.session_state.nombre=res; st.success(f"Encontrado: {res}"); st.rerun()
-                else: st.error("No encontrado, verifica DNI/RUC")
+    st.button("🔍 Buscar", use_container_width=True, type="primary", on_click=buscar_click)
 
 c5,c6,c7=st.columns([2,1.2,1])
-with c5: nombre2=st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="nombre2")
-with c6: dni2=st.text_input("DNI 2", key="dni2")
-with c7: celular=st.text_input("CELULAR", key="celular")
+with c5: st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="w_nombre2")
+with c6: st.text_input("DNI 2", key="w_dni2")
+with c7: st.text_input("CELULAR", key="w_celular")
 
 c8,c9,c10,c11=st.columns([1.6,0.6,0.6,0.7])
-with c8: destino=st.selectbox("DESTINO (escribe para filtrar)", PROVINCIAS_PERU)
-with c9: bulto=st.number_input("BULTO INICIO", min_value=1, step=1, key="bulto")
-with c10: total=st.number_input("TOTAL", min_value=1, step=1, key="total")
+with c8: st.selectbox("DESTINO (escribe para filtrar)", PROVINCIAS_PERU, key="w_destino")
+with c9: st.number_input("BULTO INICIO", min_value=1, step=1, key="w_bulto")
+with c10: st.number_input("TOTAL", min_value=1, step=1, key="w_total")
 with c11:
     st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
-    if st.button("➕ Agregar", use_container_width=True, type="primary"):
-        for i in range(bulto, total+1):
-            st.session_state.data.append({"DESTINO":destino,"BULTOS":f"{i}/{total}","ATT 1":nombre,"DNI 1":dni,"FACTURA":factura,"ATT 2":nombre2,"DNI 2":dni2,"CELULAR":celular})
-        st.session_state.dni=""; st.session_state.nombre=""; st.session_state.factura=""; st.session_state.nombre2=""; st.session_state.dni2=""; st.session_state.celular=""
-        st.session_state.bulto=1; st.session_state.total=1
-        st.rerun()
+    st.button("➕ Agregar", use_container_width=True, type="primary", on_click=agregar_click)
 
 def generar_pdf_bytes(logo_emp, logo_mar, formato_sel):
     is_horizontal = "HORIZONTAL" in formato_sel
