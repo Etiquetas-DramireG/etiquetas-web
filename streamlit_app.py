@@ -20,8 +20,8 @@ if not st.session_state.logged:
     st.markdown("<style>.stApp{background:#f2f3f7 !important;} div[data-testid='stTextInput'] input{background:white !important; color:#111827 !important; border:2px solid #111827 !important; border-radius:12px !important; height:50px !important;} div[data-testid='stTextInput'] label p{color:#111827 !important; font-weight:800 !important;}</style>", unsafe_allow_html=True)
     c1,c2,c3 = st.columns([1,1.2,1])
     with c2:
-        st.markdown("<br><br><h1 style='text-align:center; color:#111827;'>Etiquetas <span style='color:#ff7a5c;'>PRO</span></h1>", unsafe_allow_html=True)
-        u = st.text_input("USUARIO", value=""); p = st.text_input("CLAVE", type="password", value="")
+        st.markdown("<br><br><h1 style='text-align:center; color:#111827;'>Bienvenido <span style='color:#ff7a5c;'></span></h1>", unsafe_allow_html=True)
+        u = st.text_input("USUARIO", value="admin"); p = st.text_input("CLAVE", type="password", value="dramireng123")
         if st.button("🔐 Entrar", use_container_width=True, type="primary"):
             if u=="admin" and p=="dramireng123": st.session_state.logged=True; st.rerun()
     footer_soporte(); st.stop()
