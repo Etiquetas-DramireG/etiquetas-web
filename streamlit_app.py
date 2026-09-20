@@ -323,10 +323,18 @@ def buscar_click():
     doc2 = st.session_state.get("w_dni2","").strip()
     if doc1:
         res = buscar_dni_ruc(doc1)
-        if res: st.session_state.w_nombre = res
+        if res: 
+            st.session_state.w_nombre = res
+            st.toast(f"✅ DNI 1: {res}")
+        else:
+            st.toast(f"❌ No encontró: {doc1}")
     if doc2:
         res = buscar_dni_ruc(doc2)
-        if res: st.session_state.w_nombre2 = res
+        if res: 
+            st.session_state.w_nombre2 = res
+            st.toast(f"✅ DNI 2: {res}")
+        else:
+            st.toast(f"❌ No encontró: {doc2}")
             
 def agregar_click():
     if not st.session_state.w_nombre: 
