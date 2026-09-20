@@ -33,18 +33,39 @@ if not st.session_state.logged:
 st.markdown("""
 <style>
 .stApp{background:#f8f9fb !important;} 
-section[data-testid="stSidebar"]{background:white !important; border-right:1px solid #e5e7eb !important;} 
+section[data-testid="stSidebar"]{background:white !important;} 
 section[data-testid="stSidebar"] *{color:#111827 !important;}
-div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p, div[data-testid="stRadio"] label p{color:#111827 !important; font-weight:800 !important; font-size:11px !important;}
-div[data-testid="stTextInput"] input{background:white !important; color:#111827 !important; border:1.5px solid #d1d5db !important; border-radius:10px !important; height:44px !important;}
-div[data-baseweb="select"] > div{background:white !important; border:1.5px solid #d1d5db !important; border-radius:10px !important; color:#111827 !important;}
-div[data-baseweb="select"] span{color:#111827 !important; font-weight:600 !important;}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{background:white !important; border:1.5px solid #e5e7eb !important; border-radius:12px !important;}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{background:white !important; border:1px dashed #9ca3af !important;}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] *{color:#111827 !important;}
+
+div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p{color:#111827 !important; font-weight:800 !important; font-size:11px !important;}
+div[data-testid="stTextInput"] input{background:white !important; color:#111827 !important; border:1.5px solid #d1d5db !important; border-radius:10px !important;}
+div[data-baseweb="select"] > div{background:white !important; border:1.5px solid #d1d5db !important; border-radius:10px !important;}
+
+/* --- CAJAS AMARILLO CLARO COMO PIDES --- */
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{
+    background:#fefce8 !important; 
+    border:1.5px solid #fde68a !important; 
+    border-radius:12px !important;
+}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{
+    background:#fefce8 !important; 
+    border:1px dashed #facc15 !important;
+    border-radius:10px !important;
+}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{
+    background:#fde047 !important; /* AMARILLO CLARO */
+    color:#422006 !important; 
+    border:1px solid #facc15 !important;
+    border-radius:8px !important;
+    font-weight:700 !important;
+}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button div{
+    color:#422006 !important;
+}
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] small{
+    color:#854d0e !important;
+}
 </style>
 """, unsafe_allow_html=True)
-
 col_titulo, col_imp, col_limpiar, col_logout = st.columns([4.2, 1.4, 1.4, 1.4])
 with col_titulo: 
     st.markdown("<h1 style='margin:0; color:#111827;'>Etiquetas <span style='color:#ff7a5c'>PRO</span> <span style='font-size:12px; background:#111827; color:white; padding:4px 12px; border-radius:20px;'>v2.0</span></h1>", unsafe_allow_html=True)
