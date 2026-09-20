@@ -305,18 +305,40 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
 
 def buscar_dni_ruc(doc, token=None):
     doc = str(doc).strip()
-    if len(doc) not in (8, 11): return None
-    urls = [f"https://api.apis.net.pe/v1/dni?numero={doc}" if len(doc)==8 else f"https://api.apis.net.pe/v1/ruc?numero={doc}"]
-    for url in urls:
-        try:
-            r = requests.get(url, timeout=8)
-            if r.status_code == 200:
-                d = r.json()
-                if len(doc)==8 and d.get("nombres"):
-                    return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
-                if len(doc)==11:
-                    return (d.get("razonSocial") or d.get("nombre") or "").strip()
-        except: continue
+    if not doc: return None
+
+    # Para DNIs con 0 al inicio, prueba las 2 versiones
+    intentos_doc = [doc]
+    if doc.startswith("0"):
+        intentos_doc.append(doc.lstrip("0")) # 3649473
+    if len(doc) == 7:
+        intentos_doc.append("0"+doc) # por si escribe 3649473
+
+    # 1. PRIMERO PRUEBA CON TU TOKEN (apiperu.dev) - ese si tiene DNIs con 0
+    token = st.secrets.get("API_TOKEN", "") if hasattr(st, 'secrets') else ""
+    if token:
+        for d in intentos_doc:
+            try:
+                url = "https://apiperu.dev/api/dni"
+                headers = {"Authorization": f"Bearer {token}"}
+                r = requests.post(url, json={"dni": d.zfill(8)}, headers=headers, timeout=8)
+                if r.status_code == 200:
+                    data = r.json().get("data", {})
+                    nombre = f"{data.get('nombres','')} {data.get('apellido_paterno','')} {data.get('apellido_materno','')}".strip()
+                    if len(nombre) > 3:
+                        return nombre
+            except: pass
+
+    # 2. SI NO HAY TOKEN, PRUEBA GRATIS
+    for d in intentos_doc:
+        for url in [f"https://api.apis.net.pe/v1/dni?numero={d}", f"https://dniruc.apisperu.com/api/v1/dni/{d}"]:
+            try:
+                r = requests.get(url, timeout=6)
+                if r.status_code == 200:
+                    j = r.json()
+                    if j.get("nombres"):
+                        return f"{j.get('nombres','')} {j.get('apellidoPaterno','')} {j.get('apellidoMaterno','')}".strip()
+            except: continue
     return None
 
 def buscar_click():
