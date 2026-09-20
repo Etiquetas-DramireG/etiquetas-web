@@ -253,9 +253,11 @@ class MotorEtiquetasFPDF(FPDF):
 
 # --- FUNCIONES DE LÓGICA DE INTERFAZ ---
 def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
+    """ Función conectora principal corregida para agrupar múltiples bultos por hoja """
     pdf = MotorEtiquetasFPDF(logo_empresa, logo_marcas)
     lista_envios = []
     
+    # Adaptar los estados de Streamlit al diccionario que espera el motor
     for row in st.session_state.data:
         ciudad = row["DESTINO"].split("-")[-1].strip() if "-" in row["DESTINO"] else row["DESTINO"]
         lista_envios.append({
@@ -270,21 +272,29 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
             "celular": row["CELULAR"]
         })
 
+    # Procesar distribución de páginas e inyección gráfica CORREGIDA
     if "HORIZONTAL" in formato_seleccionado:  
         for datos in lista_envios:
             pdf.add_page(orientation='L', format='A4') 
             pdf.dibujar_etiqueta_maxi(0, 0, datos)       
+            
     elif "TÉRMICA" in formato_seleccionado:  
         pdf.set_auto_page_break(auto=False, margin=0)
         for datos in lista_envios:
             pdf.add_page(orientation='P', format=(100, 150))
             pdf.dibujar_etiqueta_termica(0, 0, datos)
-    else:  
+            
+    else:  # --- A4 VERTICAL ESTÁNDAR (4 BULTOS POR HOJA) CORREGIDO ---
+        # Posiciones exactas en milímetros (X, Y) para las 4 ranuras de la hoja A4
         posiciones_a4 = [(8, 5), (8, 75), (8, 145), (8, 215)]
+        
         for i, datos in enumerate(lista_envios):
-            if i % 4 == 0:
-                pdf.add_page(orientation='P', format='A4')
             idx_hoja = i % 4
+            
+            # SOLO crea una página nueva al inicio (bulto 0) o cada vez que completamos 4 bultos
+            if idx_hoja == 0:
+                pdf.add_page(orientation='P', format='A4')
+                
             x_pos, y_pos = posiciones_a4[idx_hoja]
             pdf.dibujar_etiqueta_mini(x_pos, y_pos, datos)
 
