@@ -253,12 +253,6 @@ else:
         st.session_state.print_now = False
 
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.session_state.data:
-        st.markdown(f"""
-    # =====================================================================
-    # --- BLOQUE FINAL: PREVISUALIZACIÓN DE TABLA Y CIERRE DE LA APP ---
-    # =====================================================================
-    st.markdown("<br>", unsafe_allow_html=True)
     
     if st.session_state.data:
         st.markdown(f"""
@@ -267,10 +261,8 @@ else:
             </div>
         """, unsafe_allow_html=True)
         
-        # Muestra la tabla interactiva sin la columna de índices para ahorrar espacio
         st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
     else: 
-        st.info("Aún no hay bultos - agrega clientes arriba")
+        st.info("💡 Aún no hay bultos - agrega clientes arriba")
 
-    # Inyección del banner de contacto técnico al fondo de la pantalla principal
     footer_soporte()
