@@ -11,9 +11,15 @@ if 'logged' not in st.session_state: st.session_state.logged=False
 if 'data' not in st.session_state: st.session_state.data=[]
 if 'print_now' not in st.session_state: st.session_state.print_now=False
 
-# VALORES INICIALES PARA LIMPIAR
-for k in ["dni","nombre","celular","factura","nombre2","dni2","bulto","total"]:
-    if k not in st.session_state: st.session_state[k]=""
+# INICIALIZAR BIEN (TEXTO VACIO, NUMEROS EN 1)
+if "dni" not in st.session_state: st.session_state.dni=""
+if "nombre" not in st.session_state: st.session_state.nombre=""
+if "factura" not in st.session_state: st.session_state.factura=""
+if "nombre2" not in st.session_state: st.session_state.nombre2=""
+if "dni2" not in st.session_state: st.session_state.dni2=""
+if "celular" not in st.session_state: st.session_state.celular=""
+if "bulto" not in st.session_state: st.session_state.bulto=1
+if "total" not in st.session_state: st.session_state.total=1
 
 def footer_soporte():
     st.markdown("""<div style="position:fixed; bottom:0; left:0; width:100%; background:#002244; padding:10px 0; text-align:center; z-index:999;">
@@ -39,11 +45,9 @@ section[data-testid="stSidebar"] *{color:#111827!important;}
 div[data-testid="stTextInput"] label p, div[data-testid="stSelectbox"] label p, div[data-testid="stNumberInput"] label p{color:#111827!important; font-weight:800!important; font-size:11px!important;}
 div[data-testid="stTextInput"] input{background:white!important; color:#111827!important; border:1.5px solid #d1d5db!important; border-radius:10px!important; height:44px!important;}
 div[data-baseweb="select"] > div{background:white!important; border:1.5px solid #d1d5db!important; border-radius:10px!important;}
-/* AMARILLO CLARO */
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"]{background:#fefce8!important; border:1.5px solid #fde68a!important; border-radius:12px!important;}
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"] section{background:#fefce8!important; border:1px dashed #facc15!important;}
 section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button{background:#fde047!important; color:#422006!important; border:1px solid #facc15!important; font-weight:700!important;}
-section[data-testid="stSidebar"] div[data-testid="stFileUploader"] *{color:#111827!important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -62,33 +66,31 @@ with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     formato=st.radio("FORMATO", ["A4 VERTICAL - 4 POR HOJA","TÉRMICA 100X150"], label_visibility="collapsed")
     st.markdown("**TU LOGO DE TU EMPRESA (arriba derecha)**")
-    logo_empresa=st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="dg", label_visibility="collapsed")
+    logo_empresa=st.file_uploader("TU LOGO", type=["png","jpg","jpeg"], key="logo_emp", label_visibility="collapsed")
     st.markdown("**LOGO DE MARCAS ABAJO (Opcional)**")
-    logo_marcas=st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="marcas", label_visibility="collapsed")
+    logo_marcas=st.file_uploader("Marcas", type=["png","jpg","jpeg"], key="logo_mar", label_visibility="collapsed")
 
-PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LIMA - HUACHO","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA"])
+PROVINCIAS_PERU=sorted(["PIURA - SULLANA","PIURA - PIURA","PIURA - PAITA","PIURA - TALARA","LIMA - LIMA","LAMBAYEQUE - CHICLAYO","LA LIBERTAD - TRUJILLO","TUMBES - TUMBES","ANCASH - CHIMBOTE","AREQUIPA - AREQUIPA","CUSCO - CUSCO","ICA - ICA","JUNIN - HUANCAYO","LORETO - IQUITOS","SAN MARTIN - TARAPOTO","UCAYALI - PUCALLPA","PUNO - JULIACA","TACNA - TACNA","CAJAMARCA - CAJAMARCA"])
 
-# --- FORMULARIO CON FACTURA Y ATT2 ---
 st.markdown("#### 📝 Datos del cliente")
 c1,c2,c3=st.columns([1.2,2,1.2])
-with c1: dni=st.text_input("DNI/RUC 1", key="dni", placeholder="75098930")
-with c2: nombre=st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="nombre", placeholder="DAVID GRABIEL...")
+with c1: dni=st.text_input("DNI/RUC 1", key="dni")
+with c2: nombre=st.text_input("ATT 1 / NOMBRE PRINCIPAL", key="nombre")
 with c3: factura=st.text_input("N° FACTURA / GUIA", key="factura", placeholder="F001-XXXXX")
 
 c4,c5,c6=st.columns([2,1.2,1])
-with c4: nombre2=st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="nombre2", placeholder="DAVID RAMIREZ ROJAS")
-with c5: dni2=st.text_input("DNI 2", key="dni2", placeholder="03649473")
-with c6: celular=st.text_input("CELULAR", key="celular", placeholder="959237626")
+with c4: nombre2=st.text_input("ATT 2 / SEGUNDO NOMBRE (Opcional)", key="nombre2")
+with c5: dni2=st.text_input("DNI 2", key="dni2")
+with c6: celular=st.text_input("CELULAR", key="celular")
 
 c7,c8,c9=st.columns([1.5,0.6,0.6])
 with c7: destino=st.selectbox("DESTINO", PROVINCIAS_PERU)
-with c8: bulto=st.number_input("BULTO INICIO", 1, value=1, key="bulto")
-with c9: total=st.number_input("TOTAL", 1, value=1, key="total")
+with c8: bulto=st.number_input("BULTO INICIO", min_value=1, step=1, key="bulto")
+with c9: total=st.number_input("TOTAL", min_value=1, step=1, key="total")
 
 if st.button("➕ Agregar a la Lista", use_container_width=True, type="primary"):
     for i in range(bulto, total+1):
         st.session_state.data.append({"DESTINO":destino,"B1":i,"B2":total,"NOMBRE":nombre,"DNI":dni,"FACTURA":factura,"NOMBRE2":nombre2,"DNI2":dni2,"CELULAR":celular})
-    # LIMPIAR CAJAS AUTOMATICO COMO PEDISTE
     st.session_state.dni=""; st.session_state.nombre=""; st.session_state.factura=""; st.session_state.nombre2=""; st.session_state.dni2=""; st.session_state.celular=""
     st.session_state.bulto=1; st.session_state.total=1
     st.rerun()
@@ -98,11 +100,9 @@ def generar_pdf_bytes(logo_emp, logo_mar):
     for idx,row in enumerate(st.session_state.data):
         pos=idx%4; y_top=h-(pos*lh)
         c.setStrokeColorRGB(0,0,0); c.setLineWidth(1.5); c.rect(10, y_top-lh+10, w-20, lh-20)
-        # DESTINO + BULTO
         c.setFont("Helvetica-Bold",22); c.drawString(20, y_top-35, f"{row['DESTINO'].split('-')[-1].strip()}")
         c.setFont("Helvetica-Bold",14); c.drawString(w/2-20, y_top-35, f"({row['B1']}/{row['B2']})")
         c.line(15, y_top-45, w-115, y_top-45)
-        # DATOS COMO TU FOTO
         c.setFont("Helvetica-Bold",11); c.drawString(20, y_top-62, f"ATT: {row['NOMBRE']}")
         c.setFont("Helvetica",9); c.drawString(20, y_top-76, f"DNI/RUC: {row['DNI']} | FACTURA: {row['FACTURA']}")
         if row['NOMBRE2']:
@@ -111,19 +111,16 @@ def generar_pdf_bytes(logo_emp, logo_mar):
             c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-120, f"CELULAR: {row['CELULAR']}")
         else:
             c.setFont("Helvetica-Bold",10); c.drawString(20, y_top-92, f"CELULAR: {row['CELULAR']}")
-        # LOGO EMPRESA
         if logo_emp:
             try:
                 im=Image.open(logo_emp); b=io.BytesIO(); im.save(b,format='PNG'); b.seek(0)
                 c.drawImage(ImageReader(b), w-110, y_top-110, width=90, height=75, preserveAspectRatio=True, mask='auto')
             except: pass
-        # MARCAS ABAJO
         if logo_mar:
             try:
                 im2=Image.open(logo_mar); bm=io.BytesIO(); im2.save(bm,format='PNG'); bm.seek(0)
                 c.drawImage(ImageReader(bm), 25, y_top-lh+30, width=300, height=22, preserveAspectRatio=True, mask='auto')
             except: pass
-        # QR
         qr=qrcode.make(f"{row['DESTINO']}-{row['B1']}/{row['B2']}-{row['DNI']}"); qb=io.BytesIO(); qr.save(qb,format='PNG'); qb.seek(0)
         c.drawImage(ImageReader(qb), w-70, y_top-lh+18, width=50, height=50)
         if pos==3: c.showPage()
