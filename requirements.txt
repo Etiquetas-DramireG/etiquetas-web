@@ -1,5 +1,7 @@
 streamlit
-fpdf2
-requests
+reportlab
 qrcode[pil]
-pillow
+Pillow
+requests
+pandas
+streamlit-searchbox
