@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 import qrcode
 import io
@@ -337,19 +337,41 @@ def buscar_click():
         else: st.toast("❌ No encontrado DNI 2")
 
 def agregar_click():
-    if not st.session_state.w_nombre: st.toast("⚠️ Falta ATT 1"); return
-    b = int(st.session_state.w_bulto)
-    t = int(st.session_state.w_total)
-    for i in range(b, t+1):
+    if not st.session_state.w_nombre: 
+        st.toast("⚠️ Falta ATT 1")
+        return
+        
+    # Forzamos la lectura limpia del total de bultos ingresados por el usuario
+    b_total = int(st.session_state.get("w_total", 1))
+    
+    if b_total < 1:
+        st.toast("⚠️ La cantidad de bultos debe ser como mínimo 1")
+        return
+
+    # GENERACIÓN CORREGIDA: Esto genera las 4 filas secuenciales automáticamente
+    for i in range(1, b_total + 1):
         st.session_state.data.append({
-            "DESTINO": st.session_state.w_destino, "BULTOS": f"{i}/{t}",
-            "ATT 1": st.session_state.w_nombre, "DNI 1": st.session_state.w_dni,
-            "FACTURA": st.session_state.w_factura, "ATT 2": st.session_state.w_nombre2,
-            "DNI 2": st.session_state.w_dni2, "CELULAR": st.session_state.w_celular
+            "DESTINO": st.session_state.w_destino, 
+            "BULTOS": f"{i}/{b_total}", # Creará 1/4, 2/4, 3/4, 4/4 de corrido
+            "ATT 1": st.session_state.w_nombre, 
+            "DNI 1": st.session_state.w_dni,
+            "FACTURA": st.session_state.w_factura, 
+            "ATT 2": st.session_state.w_nombre2,
+            "DNI 2": st.session_state.w_dni2, 
+            "CELULAR": st.session_state.w_celular
         })
-    st.session_state.w_dni=""; st.session_state.w_nombre=""; st.session_state.w_factura=""
-    st.session_state.w_nombre2=""; st.session_state.w_dni2=""; st.session_state.w_celular=""
-    st.session_state.w_bulto=1; st.session_state.w_total=1
+        
+    # Limpieza reactiva de los campos de texto del formulario
+    st.session_state.w_dni = ""
+    st.session_state.w_nombre = ""
+    st.session_state.w_factura = ""
+    st.session_state.w_nombre2 = ""
+    st.session_state.w_dni2 = ""
+    st.session_state.w_celular = ""
+    st.session_state.w_bulto = 1
+    st.session_state.w_total = 1 # Restablece a 1 para el próximo cliente
+    st.toast(f"📦 ¡Se agregaron con éxito las {b_total} etiquetas correlativas!")
+
 
 def footer_soporte():
     st.markdown("""<div style="position:fixed; bottom:0; left:0; width:100%; background:#002244; padding:8px 0; text-align:center; z-index:999;">
@@ -458,10 +480,13 @@ else:
     with c6: st.text_input("DNI 2", key="w_dni2")
     with c7: st.text_input("CELULAR", key="w_celular")
     
-    c8,c9,c10,c11=st.columns([1.6,0.6,0.6,0.7])
-    with c8: st.selectbox("DESTINO", PROVINCIAS_PERU, key="w_destino")
-    with c9: st.number_input("BULTO INICIO", min_value=1, step=1, key="w_bulto")
-    with c10: st.number_input("TOTAL", min_value=1, step=1, key="w_total")
+    # --- REDISEÑO DE COLUMNAS DE CANTIDAD CORREGIDO ---
+    c8, c10, c11 = st.columns([2.0, 1.0, 1.0])
+    with c8: 
+        st.selectbox("DESTINO", PROVINCIAS_PERU, key="w_destino")
+    with c10: 
+        # Cambiamos el nombre del campo para que sea súper claro para el usuario
+        st.number_input("CANTIDAD DE BULTOS", min_value=1, step=1, key="w_total")
     with c11:
         st.markdown("<div style='height:26px;'></div>", unsafe_allow_html=True)
         st.button("➕ Agregar", use_container_width=True, type="primary", on_click=agregar_click)
