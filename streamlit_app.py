@@ -263,14 +263,14 @@ else:
     if st.session_state.data:
         st.markdown(f"""
             <div style='background:white; border:2px solid #111827; padding:12px; border-radius:10px; margin-bottom:10px;'>
-                <b style='color:#111827; font-size:15px;'>📦 BULTOS - {len(st.session_state.data)} etiquetas | Modo: {formato}</b>
+                <b style='color:#111827; font-size:15px;'>BULTOS - {len(st.session_state.data)} etiquetas | Modo: {formato}</b>
             </div>
         """, unsafe_allow_html=True)
         
         # Muestra la tabla interactiva sin la columna de índices para ahorrar espacio
         st.dataframe(pd.DataFrame(st.session_state.data), use_container_width=True, hide_index=True)
     else: 
-        st.info("💡 Aún no hay bultos - agrega clientes arriba")
+        st.info("Aún no hay bultos - agrega clientes arriba")
 
     # Inyección del banner de contacto técnico al fondo de la pantalla principal
     footer_soporte()
