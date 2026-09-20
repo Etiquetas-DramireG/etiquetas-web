@@ -133,29 +133,54 @@ with c8:
             st.session_state["do_clear"]=True; st.rerun()
 
 if st.session_state.lista:
-    st.dataframe(st.session_state.lista,use_container_width=True)
-    if st.button(f"📄 GENERAR PDF - {formato}", type="primary", use_container_width=True):
-        def dibujar(x,y,d,w,h,pdf):
-            pdf.set_draw_color(0,0,0); pdf.set_line_width(0.6 if h<100 else 1.2)
-            pdf.rect(x,y,w,h)
-            # CABECERA DESTINO + BULTOS + LOGO DG
-            pdf.set_font("Helvetica","B", 28 if h<100 else 50)
-            pdf.set_xy(x+3,y+2); pdf.cell(w*0.6,12 if h<100 else 22, d['destino'], align='L')
-            pdf.set_font("Helvetica","B", 18 if h<100 else 30)
-            pdf.set_xy(x+w*0.6,y+2); pdf.cell(w*0.2,12 if h<100 else 22, f"({d['b1']}/{d['b2']})", align='C')
-            l1="logo_dg.png" if os.path.exists("logo_dg.png") else "logo_imagen1.png" if os.path.exists("logo_imagen1.png") else None
-            if l1: pdf.image(l1, x+w-35 if h<100 else x+w-70, y+1, 33 if h<100 else 65, 14 if h<100 else 28)
-            pdf.line(x,y+16 if h<100 else y+28, x+w, y+16 if h<100 else y+28)
-            # DATOS
-            pdf.set_font("Arial","B",10 if h<100 else 18); pdf.set_xy(x+3,y+18 if h<100 else y+32); pdf.cell(w,5,f"ATT: {d['nombre'].upper()}")
-            pdf.set_xy(x+3,y+24 if h<100 else y+44); pdf.set_font("Arial","",8 if h<100 else 13); pdf.cell(w,4,f"DNI/RUC: {d['dni']} | FACTURA: {d['factura'].upper()}")
-            pdf.set_xy(x+3,y+30 if h<100 else y+54); pdf.set_font("Arial","B",9 if h<100 else 15); pdf.cell(w,4,f"CELULAR: {d['celular']}")
-            # FOOTER MARCAS + QR
-            l2="marcas.png" if os.path.exists("marcas.png") else "logo_imagen2.png" if os.path.exists("logo_imagen2.png") else None
-            if l2: pdf.image(l2, x+5, y+h-18 if h<100 else y+h-35, 120 if h<100 else 170, 12 if h<100 else 22)
-            qr=qrcode.make(f"{d['nombre']}|{d['destino']}|{d['dni']}"); qr.save("qr.png")
-            pdf.image("qr.png", x+w-22 if h<100 else x+w-40, y+h-20 if h<100 else y+h-38, 16 if h<100 else 32, 16 if h<100 else 32)
+    st .dataframe(st.session_state.lista,use_container_width=True)
+def dibujar(x,y,d,w,h,pdf):
+    # MÁS MARGEN EXTERNO
+    pdf.set_draw_color(0,0,0)
+    pdf.set_line_width(0.7 if h<100 else 1.2)
+    pdf.rect(x,y,w,h)
 
+    # 1. HEADER CON MÁS AIRE
+    # SULLANA - más separado del borde
+    pdf.set_font("Helvetica","B", 26 if h<100 else 48)
+    pdf.set_xy(x+5, y+3)  # antes era x+3, ahora +5 margen
+    pdf.cell(100, 12 if h<100 else 22, d['destino'], align='L')
+
+    # (1/4) - lo alejamos del logo DG
+    pdf.set_font("Helvetica","B", 16 if h<100 else 28)
+    # antes estaba en x+w*0.6, ahora lo movemos más a la izquierda
+    pdf.set_xy(x+108, y+4)
+    pdf.cell(30, 10 if h<100 else 20, f"({d['b1']}/{d['b2']})", align='C')
+
+    # LOGO DG - más margen a la derecha
+    l1="logo_dg.png" if os.path.exists("logo_dg.png") else "logo_imagen1.png" if os.path.exists("logo_imagen1.png") else None
+    if l1:
+        # antes x+w-35, ahora x+w-36 y un poco más chico para que respire
+        pdf.image(l1, x+w-34, y+2.5, 28, 12 if h<100 else 28)
+
+    pdf.line(x, y+18, x+w, y+18) # línea un poco más abajo, da más aire arriba
+
+    # 2. DATOS CON MÁS MARGEN IZQUIERDO
+    pdf.set_font("Arial","B",10 if h<100 else 18)
+    pdf.set_xy(x+5, y+20)
+    pdf.cell(w-10,5,f"ATT: {d['nombre'].upper()}")
+    
+    pdf.set_xy(x+5, y+26)
+    pdf.set_font("Arial","",8 if h<100 else 13)
+    pdf.cell(w-10,4,f"DNI/RUC: {d['dni']} | FACTURA: {d['factura'].upper()}")
+    
+    pdf.set_xy(x+5, y+32)
+    pdf.set_font("Arial","B",9 if h<100 else 15)
+    pdf.cell(w-10,4,f"CELULAR: {d['celular']}")
+
+    # 3. FOOTER - MARCAS Y QR CON MÁS MARGEN
+    l2="marcas.png" if os.path.exists("marcas.png") else "logo_imagen2.png" if os.path.exists("logo_imagen2.png") else None
+    if l2:
+        pdf.image(l2, x+6, y+h-16, 115, 10 if h<100 else 20)
+
+    # QR - antes x+w-22, ahora x+w-26 para que no toque el borde
+    qr=qrcode.make(f"{d['nombre']}|{d['destino']}|{d['dni']}"); qr.save("qr.png")
+    pdf.image("qr.png", x+w-24, y+h-20, 16, 16 if h<100 else 32)
         if "Térmica" in formato:
             pdf=FPDF(orientation='P', unit='mm', format=(100,150)); pdf.set_auto_page_break(auto=False)
             for d in st.session_state.lista: pdf.add_page(); dibujar(3,3,d,94,144,pdf)
@@ -164,7 +189,7 @@ if st.session_state.lista:
             for d in st.session_state.lista: pdf.add_page(); dibujar(5,5,d,287,200,pdf)
         else:
             pdf=FPDF(orientation='P', format='A4'); pdf.set_auto_page_break(auto=False)
-            pos_y=[10,75,140,205]
+            pos_y=[12, 80, 148, 216] # antes [10,75,140,205] - ahora más separación
             for i,d in enumerate(st.session_state.lista):
                 if i%4==0: pdf.add_page()
                 dibujar(10,pos_y[i%4],d,190,60,pdf)
@@ -174,3 +199,4 @@ if st.session_state.lista:
     if st.button("🗑️ Limpiar lista"): st.session_state.lista=[]; st.rerun()
 else:
     st.info("Vacío. Sube los 2 logos en la barra izquierda y pega tu Token API para buscar clientes.")
+                                                                                                                                                                                         
