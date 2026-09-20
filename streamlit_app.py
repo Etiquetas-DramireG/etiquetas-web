@@ -300,54 +300,54 @@ def generar_pdf_bytes(logo_empresa, logo_marcas, formato_seleccionado):
 def buscar_dni_ruc(doc, token):
     doc = doc.strip()
     token = (token or "").strip()
-    if not doc or not token: return None
+    if not doc or len(doc) != 8 and len(doc) != 11:
+        return None
+    if not token:
+        st.toast("⚠️ Falta TOKEN en Configuración")
+        return None
     
     headers = {"Authorization": f"Bearer {token}"}
     try:
         if len(doc) == 8:
             url = f"https://api.apis.net.pe/v2/reniec/dni?numero={doc}"
-            r = requests.get(url, headers=headers, timeout=6)
-            if r.status_code == 200:
-                d = r.json()
-                return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
-        elif len(doc) == 11:
+        else:
             url = f"https://api.apis.net.pe/v2/sunat/ruc?numero={doc}"
-            r = requests.get(url, headers=headers, timeout=6)
-            if r.status_code == 200:
-                d = r.json()
-                return d.get('razonSocial') or d.get('nombre') or d.get('nombreComercial')
-    except:
-        pass
+        
+        r = requests.get(url, headers=headers, timeout=8)
+        
+        if r.status_code == 200:
+            d = r.json()
+            if len(doc) == 8:
+                return f"{d.get('nombres','')} {d.get('apellidoPaterno','')} {d.get('apellidoMaterno','')}".strip()
+            else:
+                return d.get('razonSocial') or d.get('nombre')
+        else:
+            st.toast(f"❌ API Error {r.status_code}: {r.text[:100]}")
+    except Exception as e:
+        st.toast(f"❌ Error conexión: {e}")
     return None
 
 def buscar_click():
-    # Extraemos el token que el operario escribió en la barra de configuración
     token = st.session_state.get("api_token_input", "").strip()
+    # SI TU TOKEN ESTA EN OTRO NOMBRE CAMBIA ESTA LINEA:
+    if not token:
+        token = st.session_state.get("api_token", "").strip()
     
     doc1 = st.session_state.get("w_dni", "").strip()
-    doc2 = st.session_state.get("w_dni2", "").strip()
-    
-    if not doc1 and not doc2:
-        st.toast("⚠️ Escribe al menos un DNI 1 o DNI 2 para buscar")
+
+    if not doc1:
+        st.toast("⚠️ Escribe DNI 1")
         return
 
-    # Si hay un DNI 1 escrito, lo busca y autocompleta el Nombre 1
-    if doc1:
-        res1 = buscar_dni_ruc(doc1, token)
-        if res1: 
-            st.session_state.w_nombre = res1
-            st.toast(f"✅ DNI 1 encontrado: {res1}")
-        else: 
-            st.toast(f"❌ No se encontró el DNI 1: {doc1}")
-            
-    # Si de forma opcional también hay un DNI 2 escrito, lo busca y autocompleta el Nombre 2
-    if doc2:
-        res2 = buscar_dni_ruc(doc2, token)
-        if res2: 
-            st.session_state.w_nombre2 = res2
-            st.toast(f"✅ DNI 2 encontrado: {res2}")
-        else: 
-            st.toast(f"❌ No se encontró el DNI 2: {doc2}")
+    st.toast(f"Buscando {doc1}...")
+    res1 = buscar_dni_ruc(doc1, token)
+    
+    if res1: 
+        st.session_state.w_nombre = res1
+        st.session_state["w_nombre"] = res1
+        st.toast(f"✅ Encontrado: {res1}")
+    else: 
+        st.toast(f"❌ No se encontró: {doc1} - Revisa tu TOKEN")
             
 def agregar_click():
     if not st.session_state.w_nombre: 
